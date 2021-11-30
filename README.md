@@ -1,47 +1,43 @@
-# aiidalab_launch
+# AiiDAlab Launch
 
-Helper script to launch AiiDAlab on a local workstation.
-
-## Project Features
-
-* [aiidalab_launch](http://AiiDAlab Launch.readthedocs.io/)
-* a starter [Click](http://click.pocoo.org/5/) command-line application
-* automated unit tests you can run with [pytest](https://docs.pytest.org/en/latest/)
-* a [Sphinx](http://www.sphinx-doc.org/en/master/) documentation project
+AiiDAlab Launch makes it easy to run AiiDAlab on your own workstation or laptop.
 
 ## Getting Started
 
-The project's documentation contains a section to help you
-[get started](https://AiiDAlab Launch.readthedocs.io/en/latest/getting_started.html) as a developer or
-user of the library.
+To use AiiDAlab launch you will have to
 
-## Development Prerequisites
+1. [Install Docker on your workstation or laptop.](https://docs.docker.com/get-docker/)
+2. Install AiiDAlab launch and start AiiDAlab with
 
-If you're going to be working in the code (rather than just using the library), you'll want a few utilities.
-
-* [GNU Make](https://www.gnu.org/software/make/)
-* [Pandoc](https://pandoc.org/)
-
-## Resources
-
-Below are some handy resource links.
-
-* [Project Documentation](http://AiiDAlab Launch.readthedocs.io/)
-* [Click](http://click.pocoo.org/5/) is a Python package for creating beautiful command line interfaces in a composable way with as little code as necessary.
-* [Sphinx](http://www.sphinx-doc.org/en/master/) is a tool that makes it easy to create intelligent and beautiful documentation, written by Geog Brandl and licnsed under the BSD license.
-* [pytest](https://docs.pytest.org/en/latest/) helps you write better programs.
-* [GNU Make](https://www.gnu.org/software/make/) is a tool which controls the generation of executables and other non-source files of a program from the program's source files.
-
+    ```console
+    $ pip install aiidalab-launch
+    $ aiidalab-launch
+    ```
 
 ## Authors
 
-* **Carl Simon Adorf** - *Initial work* - [github](https://github.com/csadorf)
+* **Carl Simon Adorf (EPFL)** - [@csadorf](https://github.com/csadorf)
 
-See also the list of [contributors](https://github.com/csadorf/aiidalab_launch/contributors) who participated in this project.
+See also the list of [contributors](https://github.com/aiidalab/aiidalab-launch/contributors).
 
-## LicenseMIT License
 
-Copyright (c) csadorf
+## Citation
+
+Users of AiiDAlab are kindly asked to cite the following publication in their own work:
+
+A. V. Yakutovich et al., Comp. Mat. Sci. 188, 110165 (2021).
+[DOI:10.1016/j.commatsci.2020.110165](https://doi.org/10.1016/j.commatsci.2020.110165)
+
+## Contact
+
+aiidalab@materialscloud.org
+
+
+## MIT License
+
+Copyright (c) 2021 Carl Simon Adorf (EPFL)
+
+All rights reserved.
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -60,3 +56,18 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+
+## Acknowledgements
+
+This work is supported by the
+[MARVEL National Centre for Competency in Research](<http://nccr-marvel.ch>) funded by the [Swiss National Science Foundation](<http://www.snf.ch/en>),
+the MARKETPLACE project funded by [Horizon 2020](https://ec.europa.eu/programmes/horizon2020/) under the H2020-NMBP-25-2017 call (Grant No. 760173),
+as well as by the [MaX
+European Centre of Excellence](<http://www.max-centre.eu/>) funded by the Horizon 2020 EINFRA-5 program,
+Grant No. 676598.
+
+<div style="text-align:center">
+ <img src="logos/MARVEL.png" alt="MARVEL" height="75px">
+ <img src="logos/MaX.png" alt="MaX" height="75px">
+ <img src="logos/MarketPlace.png" alt="MarketPlace" height="75px">
+</div>
