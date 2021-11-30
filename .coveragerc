@@ -6,8 +6,6 @@ omit =
     */docs/*
     */dist/*
     setup.py
-    scratch*.py
 
 [html]
 directory=./htmlcov
-

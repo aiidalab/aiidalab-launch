@@ -15,7 +15,7 @@ Get the Source
 ==============
 
 The source code for the `AiiDAlab Launch` project lives at
-`github <https://github.com/csadorf/AiiDAlab Launch>`_.  
+`github <https://github.com/csadorf/AiiDAlab Launch>`_.
 You can use `git clone` to get it.
 
 .. code-block:: bash

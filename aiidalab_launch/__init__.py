@@ -8,4 +8,8 @@ Helper script to launch AiiDAlab on a local workstation.
 .. moduleauthor:: Carl Simon Adorf <simon.adorf@epfl.ch>
 """
 
-from .version import __version__, __release__  # noqa
+from .version import __version__
+
+__all__ = [
+    "__version__",
+]

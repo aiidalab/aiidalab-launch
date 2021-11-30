@@ -50,8 +50,4 @@ def test_ab_addSquares_equalsC(a, b, c):
     :param b: the second parameter
     :param c: the result of adding the squares of a and b
     """
-    assert (
-        a * a + b * b == c,
-        "'c' should be the sum of the squares of 'a' and 'b'. "
-        "This is an example test and can be removed.",
-    )
+    assert a * a + b * b == c

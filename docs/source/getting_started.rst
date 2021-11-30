@@ -15,6 +15,3 @@ You can use pip to install `aiidalab_launch`.
 .. code-block:: sh
 
     pip install aiidalab_launch
-
-
-
