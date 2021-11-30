@@ -1,0 +1,3 @@
+name: aiidalab_launch
+dependencies:
+  - python=3.8
