@@ -14,6 +14,8 @@ To use AiiDAlab launch you will have to
     $ aiidalab-launch
     ```
 
+**Note**: The package is not published yet, until then, please install with: `pip install git+https://github.com/aiidalab/aiidalab-launch.git`.
+
 ## Authors
 
 * **Carl Simon Adorf (EPFL)** - [@csadorf](https://github.com/csadorf)
