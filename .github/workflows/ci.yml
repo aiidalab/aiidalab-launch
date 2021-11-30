@@ -1,0 +1,41 @@
+name: continuous-integration
+
+on: [push, pull_request]
+
+jobs:
+
+  pre-commit:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: Set up Python 3.10
+      uses: actions/setup-python@v2
+      with:
+        python-version: "3.10"
+    - uses: pre-commit/action@v2.0.0
+
+  test-package:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+          submodules: true
+
+      - uses: actions/setup-python@v2
+        with:
+          python-version: "3.10"
+
+      - name: Install package
+        run: |
+          which python
+          python -m pip install -e .[tests]
+          python -m pip freeze
+
+      - name: Run tests
+        run: python -m pytest -v
