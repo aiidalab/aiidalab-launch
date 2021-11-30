@@ -4,280 +4,325 @@
 Authors:
     * Carl Simon Adorf <simon.adorf@epfl.ch>
 """
-import json
-import os
+import logging
+import sys
+from dataclasses import dataclass, field
 from pathlib import Path
 from secrets import token_hex
-from subprocess import SubprocessError, run
-from textwrap import wrap
-from time import sleep
+from textwrap import indent
+from threading import Thread
 
 import click
-from dotenv import dotenv_values
+import docker
 
+from .core import Config, Profile
 from .version import __version__
 
+APPLICATION_ID = "org.aiidalab.aiidalab_launch"
 
-def _get_service_container_id(docker_compose, service):
-    return (
-        docker_compose(["ps", "-q", service], capture_output=True)
-        .stdout.decode()
-        .strip()
-    )
+APPLICATION_CONFIG_PATH = Path(click.get_app_dir(APPLICATION_ID)) / "config.toml"
+
+MAIN_PROFILE_NAME = "main"
 
 
-def _service_is_up(docker_compose, service):
-    service_container_id = _get_service_container_id(docker_compose, "aiidalab")
-    if service_container_id:
-        running_containers = (
-            run(["docker", "ps", "-q", "--no-trunc"], capture_output=True)
-            .stdout.decode()
-            .strip()
-            .splitlines()
+LOGGING_LEVELS = {
+    0: logging.ERROR,
+    1: logging.WARN,
+    2: logging.INFO,
+    3: logging.DEBUG,
+}  #: a mapping of `verbose` option counts to logging levels
+
+
+LOGGER = logging.getLogger(APPLICATION_ID.split(".")[-1])
+
+
+@dataclass
+class ApplicationState:
+
+    config: Config = field(default_factory=lambda: Config.load(APPLICATION_CONFIG_PATH))
+
+
+pass_app_state = click.make_pass_decorator(ApplicationState, ensure=True)
+
+
+def with_profile(cmd):
+    def callback(ctx, param, value):
+        app_state = ctx.ensure_object(ApplicationState)
+        name = value or app_state.config.default_profile
+        LOGGER.info(f"Using profile: {name}")
+        return app_state.config.get_profile(name)
+
+    return click.option(
+        "-p", "--profile", help="Select profile to use.", callback=callback
+    )(cmd)
+
+
+def _get_container(client, container_name):
+    try:
+        return client.containers.get(container_name)
+    except docker.errors.NotFound:
+        raise click.ClickException(
+            "Unable to communicate with the AiiDAlab container with name "
+            f"'{container_name}'. Is it running? Use `start` to start it."
         )
-        return service_container_id in running_containers
-    else:
-        return False
+
+
+class Timeout(Exception):
+    pass
+
+
+def _wait_for_services(container, timeout=None):
+    error = False
+
+    def _internal():
+        nonlocal error
+        error = container.exec_run("wait-for-services").exit_code != 0
+
+    thread = Thread(target=_internal)
+    thread.start()
+    thread.join(timeout=timeout)
+    if error:
+        raise RuntimeError(
+            "Failed to wait-for-services, is this a valid AiiDAlab instance?"
+        )
+    elif thread.is_alive():
+        raise Timeout
 
 
 @click.group()
-@click.option(
-    "--develop",
-    is_flag=True,
-    help="Use this option to build AiiDAlab with development versions.",
-)
-@click.option("-p", "--project-name", help="Specify an alternative project name.")
-@click.option(
-    "--env-file",
-    type=click.Path(dir_okay=False, writable=True, path_type=Path),
-    default=".env",
-    help="The path of the env-file to use for configuration.",
-    show_default=True,
-)
 @click.option(
     "-v",
     "--verbose",
     count=True,
     help="Provide this option to increase the output verbosity of the launcher.",
 )
-@click.option(
-    "--yes",
-    is_flag=True,
-    help="Automatically respond with yes to any prompts.",
-)
-@click.pass_context
-def cli(ctx, develop, project_name, env_file, verbose, yes):
+@pass_app_state
+def cli(app_state, verbose):
+    # Use the verbosity count to determine the logging level...
+    if verbose > 0:
+        logging.basicConfig(
+            level=LOGGING_LEVELS[verbose]
+            if verbose in LOGGING_LEVELS
+            else logging.DEBUG
+        )
+        click.secho(
+            f"Verbose logging is enabled. "
+            f"(LEVEL={logging.getLogger().getEffectiveLevel()})",
+            fg="yellow",
+        )
 
-    # Specify the compose-files that will be merged to generate the final config.
-    compose_file_args = ["-f", "docker-compose.yml"]
-    if develop:
-        compose_file_args.extend(["-f", "docker-compose.develop.yml"])
-
-    # This command is to be used by all sub-commands.
-    def _compose_cmd(args, **kwargs):
-        args.insert(0, f"--env-file={env_file}")
-        if project_name:
-            args.insert(0, f"--project-name={project_name}")
-        kwargs.setdefault("capture_output", not verbose)
-        kwargs.setdefault("check", True)
-        kwargs.setdefault("env", {})
-        kwargs["env"].setdefault("PATH", os.environ["PATH"])
-        return run(["docker-compose", *compose_file_args, *args], **kwargs)
-
-    ctx.obj = dict()
-    ctx.obj["compose_cmd"] = _compose_cmd
-    ctx.obj["env_file"] = env_file
-    ctx.obj["verbose"] = verbose
-    ctx.obj["yes"] = yes
+    LOGGER.info(f"Configuration file path: {APPLICATION_CONFIG_PATH}")
+    LOGGER.debug(f"Configuration: \n\n{indent(app_state.config.dumps(), '    ')}")
 
 
 @cli.command()
 @click.pass_context
 def version(ctx):
-    """Show the tool's version."""
+    """Show the version of aiidalab-launch."""
     click.echo(click.style(f"AiiDAlab Launch {__version__}", bold=True))
 
 
-@cli.command()
-@click.pass_context
-def show_config(ctx):
-    """Show the merged docker-compose config."""
-    _docker_compose = ctx.obj["compose_cmd"]
-    click.echo(_docker_compose(["config"], capture_output=True).stdout)
+@cli.group()
+def profiles():
+    """Manage AiiDAlab profiles."""
+    pass
+
+
+@profiles.command("list")
+@pass_app_state
+def list_profiles(app_state):
+    """List all configured AiiDAlab profiles."""
+    click.echo("\n".join([profile.name for profile in app_state.config.profiles]))
+
+
+@profiles.command("show")
+@click.argument("profile")
+@pass_app_state
+def show_profile(app_state, profile):
+    """Show a AiiDAlab profile configuration."""
+    click.echo(app_state.config.get_profile(profile).dumps(), nl=False)
+
+
+@profiles.command("edit")
+@click.argument("profile")
+@pass_app_state
+def edit_profile(app_state, profile):
+    """Edit a AiiDAlab profile configuration."""
+    current_profile = app_state.config.get_profile(profile)
+    profile_edit = click.edit(current_profile.dumps(), extension=".toml")
+    if profile_edit:
+        new_profile = Profile.loads(profile, profile_edit)
+        if new_profile != current_profile:
+            app_state.config.profiles.remove(current_profile)
+            app_state.config.profiles.append(new_profile)
+            app_state.config.save(APPLICATION_CONFIG_PATH)
+            return
+    click.echo("No changes.")
 
 
 @cli.command()
 @click.option(
-    "--home-dir",
-    type=click.Path(),
-    help="Specify a path to a directory on a host system that is to be mounted "
-    "as the home directory on the AiiDAlab service. Uses docker volume if not provided.",
-)
-@click.option(
-    "--port",
-    help="Port on which AiiDAlab can be accessed.",
-)
-@click.option(
-    "--username", help="Specify the username to be used within the container."
-)
-@click.option(
-    "--jupyter-token",
-    help="A secret token that is needed to access AiiDAlab for the first time. "
-    "Defaults to a random string if not provided (recommended).",
-)
-@click.option(
-    "--app",
-    multiple=True,
-    help="Specify app to install on first server start, using the same syntax as "
-    "`aiidalab install`. This option can be used multiple times to specify "
-    "multiple default apps.",
-)
-@click.pass_context
-def configure(ctx, home_dir, port, username, jupyter_token, app):
-    """Configure the local AiiDAlab environment."""
-    env_file = ctx.obj["env_file"]
-
-    # First, specify the defaults.
-    env = {
-        "AIIDALAB_HOME_VOLUME": "aiidalab-home",
-        "AIIDALAB_PORT": "8888",
-        "AIIDALAB_DEFAULT_APPS": "aiidalab-widgets-base",
-        "JUPYTER_TOKEN": token_hex(32),
-        "SYSTEM_USER": "aiida",
-    }
-
-    # Next, update them with the currently stored values.
-    env.update(dotenv_values(env_file))
-
-    # Finally, update them with any of the values provided as arguments.
-    provided = {
-        "AIIDALAB_HOME_VOLUME": str(home_dir) if home_dir else None,
-        "AIIDALAB_PORT": str(port) if port else None,
-        "AIIDALAB_DEFAULT_APPS": " ".join(app),
-        "JUPYTER_TOKEN": str(jupyter_token) if jupyter_token else None,
-        "SYSTEM_USER": username or None,
-    }
-    env.update({key: value for key, value in provided.items() if value})
-
-    # Write environment to the env_file.
-    env_file.write_text(
-        "\n".join(f"{key}={value}" for key, value in env.items()) + "\n"
-    )
-    click.echo(f"Written configuration to '{env_file}'.")
-
-
-@cli.command()
-@click.option(
-    "--restart", is_flag=True, help="Restart AiiDAlab in case that it is already up."
-)
-@click.pass_context
-def up(ctx, restart):
-    """Start AiiDAlab on this host."""
-
-    # Check for an '.env' file. The file can be automatically created via the
-    # `configure` command.
-    msg_warn_up_without_env_file = "\n".join(
-        wrap(
-            "Warning: Did not find an '.env' file in the current working directory. It "
-            "is recommended to run the 'configure' command prior to first start. "
-            "Continue anyways?"
-        )
-    )
-    env_file = Path.cwd().joinpath(".env")
-    if not env_file.exists() and not ctx.obj["yes"]:
-        click.confirm(msg_warn_up_without_env_file, abort=True)
-
-    # Get the `docker-compose` proxy command from the global context.
-    _docker_compose = ctx.obj["compose_cmd"]
-
-    # Check if server is already started.
-    if not restart and _service_is_up(_docker_compose, "aiidalab"):
-        click.echo(
-            "Service is already running. Use the `--restart` option to force a restart."
-        )
-
-    # Actually run the `docker-compose up` command.
-    click.echo("Starting AiiDAlab (this can take multiple minutes) ...")
-    _docker_compose(
-        ["up", "--detach", "--build"] + (["--force-recreate"] if restart else [])
-    )
-
-    # We display the entry point to the user by invoking the `status()`
-    # function, which the user can also invoke directly via the `status`
-    # sub-command.  We sleep briefly, as trying to determine the entry point
-    # immediately after "upping" the service is prone to fail.
-    sleep(0.5)
-    ctx.invoke(status)
-
-
-@cli.command()
-@click.option(
-    "-v",
-    "--volumes",
+    "--restart",
     is_flag=True,
-    help="In addition to stopping the service, also remove any volumes. "
-    "Warning: This can lead to irreversible data loss!",
+    help="Restart the container in case that it is already running.",
 )
-@click.pass_context
-def down(ctx, volumes):
-    """Stop AiiDAlab on this host.
+@with_profile
+def start(profile, restart):
+    """Start an AiiDAlab instance on this host."""
+    client = docker.from_env()
+    profile.home_mount.mkdir(exist_ok=True)
 
-    This is a thin wrapper around `docker-compose down`.
-    """
-    _docker_compose = ctx.obj["compose_cmd"]
-    if volumes and not ctx.obj["yes"]:
-        click.confirm(
-            "Are you sure you want to remove all volumes? "
-            "This can lead to irreversible data loss!",
-            abort=True,
+    mounts = [
+        docker.types.Mount(
+            target=f"/home/{profile.system_user}",
+            source=str(profile.home_mount),
+            type="bind",
         )
+    ]
 
-    _docker_compose(["down"] + (["--volumes"] if volumes else []))
-    click.echo("AiiDAlab stopped.")
+    try:
+        try:
+            container = client.containers.get(profile.container_name())
+            if restart:
+                click.echo("Restarting container...", err=True)
+                container.restart()
+        except docker.errors.NotFound:
+            click.echo(f"Pulling image '{profile.image}'...", err=True)
+            image = client.images.pull(profile.image)
+            LOGGER.info(f"Pulled image: {image}")
+
+            click.echo("Starting container...", err=True)
+            container = client.containers.start(
+                image=profile.image,
+                name=profile.container_name(),
+                environment=profile.environment(jupyter_token=token_hex(32)),
+                mounts=mounts,
+                ports={"8888/tcp": profile.port},
+                detach=True,
+                remove=True,
+            )
+            LOGGER.info(f"Started container: {container}")
+    except docker.errors.ImageNotFound as error:
+        raise click.ClickException(f"Failed to start: {error}")
 
 
-@cli.command("status")
-@click.pass_context
-def status(ctx):
-    """Show status of the AiiDAlab instance.
+@cli.command()
+@click.option(
+    "-r",
+    "--remove",
+    is_flag=True,
+    help="Do not only stop the container, but also remove it.",
+)
+@click.option(
+    "-t",
+    "--timeout",
+    type=click.INT,
+    default=20,
+    help="Wait this long for the instance to shut down.",
+)
+@with_profile
+def stop(profile, remove, timeout):
+    """Stop an AiiDAlab instance on this host."""
+    client = docker.from_env()
+    container = _get_container(client, profile.container_name())
+    click.echo("Stopping AiiDAlab... ", nl=False, err=True)
+    container.stop(timeout=20)
+    click.echo("stopped.", err=True)
+    if remove:
+        click.echo("Removing container... ", nl=False, err=True)
+        container.remove()
+        click.echo("done.", err=True)
+
+
+@cli.command()
+@with_profile
+def status(profile):
+    """Show status of an AiiDAlab instance.
 
     Shows the entrypoint for running instances.
     """
-    _docker_compose = ctx.obj["compose_cmd"]
+    client = docker.from_env()
+    container = _get_container(client, profile.container_name())
 
-    try:
-        _docker_compose(["exec", "aiidalab", "wait-for-services"])
-        aiidalab_container_id = _get_service_container_id(_docker_compose, "aiidalab")
-        config = json.loads(
-            run(
-                ["docker", "inspect", aiidalab_container_id],
-                check=True,
-                capture_output=True,
-            ).stdout
-        )[0]
+    click.echo(f"{container.name}: {container.status}")
 
-        host_port = config["HostConfig"]["PortBindings"]["8888/tcp"][0]["HostPort"]
-        for env in config["Config"]["Env"]:
-            if "JUPYTER_TOKEN" in env:
-                jupyter_token = env.split("=")[1]
-                break
-        else:
-            raise RuntimeError("Failed to determine jupyter token.")
-    except SubprocessError:
-        click.echo(
-            "Unable to communicate with the AiiDAlab container. Is it running? "
-            "Use `up` to start it."
-        )
-    except (KeyError, IndexError) as error:
-        raise click.ClickException(
-            f"Failed to determine entry point due to error: '{error}'"
-        )
-    else:
+    if container.status == "running":
+
+        # Check whether services are already up.
+        try:
+            _wait_for_services(container, timeout=3)
+        except Timeout:
+            click.secho(
+                "Timed out while waiting for services. The AiiDAlab instances is "
+                "likely still starting up.",
+                fg="yellow",
+            )
+            return
+
+        except RuntimeError as error:
+            raise click.ClickException(str(error))
+
+        # Determine host port.
+        try:
+            host_port = container.ports["8888/tcp"][0]["HostPort"]
+        except (KeyError, IndexError):
+            raise click.ClickException(
+                "The AiiDAlab instance appears to be running, but the port is "
+                "not forwarded to the host."
+            )
+
+        # Determine JUPYTER_TOKEN.
+        try:
+            result = container.exec_run("/bin/sh -c 'echo $JUPYTER_TOKEN'")
+            assert result.exit_code == 0
+            jupyter_token = result.output.decode().strip()
+        except AssertionError:
+            raise click.ClickException("Failed to determine the jupyter token.")
+
+        # Present user with a suggested link on how to access the instance.
         click.secho(
             f"Open this link in the browser to enter AiiDAlab:\n"
             f"http://localhost:{host_port}/?token={jupyter_token}",
             fg="green",
         )
+
+
+@cli.command()
+@click.argument("cmd", nargs=-1)
+@click.option("-p", "--privileged", is_flag=True)
+@click.option("--forward-exit-code", is_flag=True)
+@with_profile
+def exec(profile, cmd, privileged, forward_exit_code):
+    """Directly execute a command on a AiiDAlab instance.
+
+    For example, to get a list of all installed aiidalab applications, run:
+
+        aiidalab-launch exec aiidalab list
+
+    """
+    client = docker.from_env()
+    container = _get_container(client, profile.container_name())
+
+    LOGGER.info(f"Executing: {' '.join(cmd)}")
+    exec_id = client.api.exec_create(
+        container.id,
+        " ".join(cmd),
+        user=None if privileged else profile.system_user,
+        workdir=None if privileged else f"/home/{profile.system_user}",
+    )["Id"]
+
+    output = client.api.exec_start(exec_id, stream=True)
+    for chunk in output:
+        click.echo(chunk.decode(), nl=False)
+
+    result = client.api.exec_inspect(exec_id)
+    if result["ExitCode"] != 0:
+        if forward_exit_code:
+            sys.exit(result["ExitCode"])
+        else:
+            raise click.ClickException(
+                f"Command failed with exit code: {result['ExitCode']}"
+            )
 
 
 if __name__ == "__main__":
