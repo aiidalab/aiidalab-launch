@@ -5,7 +5,6 @@ Authors:
     * Carl Simon Adorf <simon.adorf@epfl.ch>
 """
 import logging
-import sys
 from dataclasses import dataclass, field
 from pathlib import Path
 from secrets import token_hex
@@ -16,6 +15,7 @@ import click
 import docker
 
 from .core import Config, Profile
+from .util import get_container, get_docker_client
 from .version import __version__
 
 APPLICATION_ID = "org.aiidalab.aiidalab_launch"
@@ -40,6 +40,7 @@ LOGGER = logging.getLogger(APPLICATION_ID.split(".")[-1])
 class ApplicationState:
 
     config: Config = field(default_factory=lambda: Config.load(APPLICATION_CONFIG_PATH))
+    docker_client: docker.DockerClient = field(default_factory=get_docker_client)
 
 
 pass_app_state = click.make_pass_decorator(ApplicationState, ensure=True)
@@ -55,16 +56,6 @@ def with_profile(cmd):
     return click.option(
         "-p", "--profile", help="Select profile to use.", callback=callback
     )(cmd)
-
-
-def _get_container(client, container_name):
-    try:
-        return client.containers.get(container_name)
-    except docker.errors.NotFound:
-        raise click.ClickException(
-            "Unable to communicate with the AiiDAlab container with name "
-            f"'{container_name}'. Is it running? Use `start` to start it."
-        )
 
 
 class Timeout(Exception):
@@ -166,10 +157,11 @@ def edit_profile(app_state, profile):
     is_flag=True,
     help="Restart the container in case that it is already running.",
 )
+@pass_app_state
 @with_profile
-def start(profile, restart):
+def start(app_state, profile, restart):
     """Start an AiiDAlab instance on this host."""
-    client = docker.from_env()
+    client = app_state.docker_client
     profile.home_mount.mkdir(exist_ok=True)
 
     mounts = [
@@ -220,11 +212,12 @@ def start(profile, restart):
     default=20,
     help="Wait this long for the instance to shut down.",
 )
+@pass_app_state
 @with_profile
-def stop(profile, remove, timeout):
+def stop(app_state, profile, remove, timeout):
     """Stop an AiiDAlab instance on this host."""
-    client = docker.from_env()
-    container = _get_container(client, profile.container_name())
+    client = app_state.docker_client
+    container = get_container(client, profile.container_name())
     click.echo("Stopping AiiDAlab... ", nl=False, err=True)
     container.stop(timeout=20)
     click.echo("stopped.", err=True)
@@ -234,15 +227,16 @@ def stop(profile, remove, timeout):
         click.echo("done.", err=True)
 
 
-@cli.command()
+@cli.command("status")
+@pass_app_state
 @with_profile
-def status(profile):
+def status(app_state, profile):
     """Show status of an AiiDAlab instance.
 
     Shows the entrypoint for running instances.
     """
-    client = docker.from_env()
-    container = _get_container(client, profile.container_name())
+    client = app_state.docker_client
+    container = get_container(client, profile.container_name())
 
     click.echo(f"{container.name}: {container.status}")
 
@@ -291,8 +285,9 @@ def status(profile):
 @click.argument("cmd", nargs=-1)
 @click.option("-p", "--privileged", is_flag=True)
 @click.option("--forward-exit-code", is_flag=True)
+@click.pass_context
 @with_profile
-def exec(profile, cmd, privileged, forward_exit_code):
+def exec(ctx, profile, cmd, privileged, forward_exit_code):
     """Directly execute a command on a AiiDAlab instance.
 
     For example, to get a list of all installed aiidalab applications, run:
@@ -300,8 +295,8 @@ def exec(profile, cmd, privileged, forward_exit_code):
         aiidalab-launch exec aiidalab list
 
     """
-    client = docker.from_env()
-    container = _get_container(client, profile.container_name())
+    client = ctx.find_object(ApplicationState).docker_client
+    container = get_container(client, profile.container_name())
 
     LOGGER.info(f"Executing: {' '.join(cmd)}")
     exec_id = client.api.exec_create(
@@ -318,11 +313,9 @@ def exec(profile, cmd, privileged, forward_exit_code):
     result = client.api.exec_inspect(exec_id)
     if result["ExitCode"] != 0:
         if forward_exit_code:
-            sys.exit(result["ExitCode"])
+            ctx.exit(result["ExitCode"])
         else:
-            raise click.ClickException(
-                f"Command failed with exit code: {result['ExitCode']}"
-            )
+            ctx.fail(f"Command failed with exit code: {result['ExitCode']}")
 
 
 if __name__ == "__main__":
