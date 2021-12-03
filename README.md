@@ -9,12 +9,27 @@ To use AiiDAlab launch you will have to
 1. [Install Docker on your workstation or laptop.](https://docs.docker.com/get-docker/)
 2. Install AiiDAlab launch and start AiiDAlab with
 
-    ```console
-    $ pip install aiidalab-launch
-    $ aiidalab-launch
+    ```bash
+    # pip install aiidalab-launch  # not published yet
+    pip install git+https://github.com/aiidalab/aiidalab-launch.git
+    aiidalab-launch start
     ```
+3. Follow the instructions on screen to open AiiDAlab in the browser.
 
-**Note**: The package is not published yet, until then, please install with: `pip install git+https://github.com/aiidalab/aiidalab-launch.git`.
+See `aiidalab-launch --help` for detailed help.
+
+### Instance Management
+
+You can inspect the status of all configured AiiDAlab profiles with:
+
+```console
+aiidalab-launch status
+```
+
+### Profile Management
+
+The tool allows to manage multiple profiles, e.g., with different home directories or ports.
+See `aiidalab-launch profiles --help` for more information.
 
 ## Authors
 
