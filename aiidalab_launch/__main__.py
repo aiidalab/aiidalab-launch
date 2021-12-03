@@ -9,13 +9,13 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from secrets import token_hex
 from textwrap import indent
-from threading import Thread
 
 import click
 import docker
+from tabulate import tabulate
 
 from .core import Config, Profile
-from .util import get_container, get_docker_client
+from .util import AiidaLabInstance, get_container, get_docker_client
 from .version import __version__
 
 APPLICATION_ID = "org.aiidalab.aiidalab_launch"
@@ -63,28 +63,6 @@ def with_profile(cmd):
     return click.option(
         "-p", "--profile", help="Select profile to use.", callback=callback
     )(cmd)
-
-
-class Timeout(Exception):
-    pass
-
-
-def _wait_for_services(container, timeout=None):
-    error = False
-
-    def _internal():
-        nonlocal error
-        error = container.exec_run("wait-for-services").exit_code != 0
-
-    thread = Thread(target=_internal)
-    thread.start()
-    thread.join(timeout=timeout)
-    if error:
-        raise RuntimeError(
-            "Failed to wait-for-services, is this a valid AiiDAlab instance?"
-        )
-    elif thread.is_alive():
-        raise Timeout
 
 
 @click.group()
@@ -236,56 +214,35 @@ def stop(app_state, profile, remove, timeout):
 
 @cli.command("status")
 @pass_app_state
-@with_profile
-def status(app_state, profile):
-    """Show status of an AiiDAlab instance.
-
-    Shows the entrypoint for running instances.
-    """
+def status(app_state):
+    """Show AiiDAlab instance status and entry point."""
     client = app_state.docker_client
-    container = get_container(client, profile.container_name())
 
-    click.echo(f"{container.name}: {container.status}")
-
-    if container.status == "running":
-
-        # Check whether services are already up.
-        try:
-            _wait_for_services(container, timeout=3)
-        except Timeout:
-            click.secho(
-                "Timed out while waiting for services. The AiiDAlab instances is "
-                "likely still starting up.",
-                fg="yellow",
-            )
-            return
-
-        except RuntimeError as error:
-            raise click.ClickException(str(error))
-
-        # Determine host port.
-        try:
-            host_port = container.ports["8888/tcp"][0]["HostPort"]
-        except (KeyError, IndexError):
-            raise click.ClickException(
-                "The AiiDAlab instance appears to be running, but the port is "
-                "not forwarded to the host."
-            )
-
-        # Determine JUPYTER_TOKEN.
-        try:
-            result = container.exec_run("/bin/sh -c 'echo $JUPYTER_TOKEN'")
-            assert result.exit_code == 0
-            jupyter_token = result.output.decode().strip()
-        except AssertionError:
-            raise click.ClickException("Failed to determine the jupyter token.")
-
-        # Present user with a suggested link on how to access the instance.
-        click.secho(
-            f"Open this link in the browser to enter AiiDAlab:\n"
-            f"http://localhost:{host_port}/?token={jupyter_token}",
-            fg="green",
+    # Collect status of each profile
+    click.echo("Collecting status info...", err=True)
+    headers = ["Profile", "Container", "Status", "URL"]
+    rows = []
+    for instance in (
+        AiidaLabInstance(client=client, profile=profile)
+        for profile in app_state.config.profiles
+    ):
+        instance_status = instance.status()
+        rows.append(
+            [
+                instance.profile.name,
+                instance.profile.container_name(),
+                {AiidaLabInstance.AiidaLabInstanceStatus.STARTING: "starting..."}.get(
+                    instance_status, instance_status.name.lower()
+                ),
+                (
+                    instance.url()
+                    if instance_status is AiidaLabInstance.AiidaLabInstanceStatus.UP
+                    else ""
+                ),
+            ]
         )
+
+    click.echo(tabulate(rows, headers=headers))
 
 
 @cli.command()
