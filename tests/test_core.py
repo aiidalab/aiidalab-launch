@@ -65,6 +65,8 @@ def test_instance_init(instance):
     assert instance.status() is instance.AiidaLabInstanceStatus.DOWN
 
 
+@pytest.mark.slow
+@pytest.mark.trylast
 def test_instance_start_stop(instance):
     instance.start()
     sleep(0.1)

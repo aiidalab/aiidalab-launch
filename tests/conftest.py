@@ -57,3 +57,18 @@ def docker_client():
         yield docker.from_env()
     except docker.errors.DockerException:
         pytest.skip("docker not available")
+
+
+def pytest_addoption(parser):
+    parser.addoption(
+        "--slow",
+        action="store_true",
+        dest="slow",
+        default=False,
+        help="Enabel long running tests.",
+    )
+
+
+def pytest_configure(config):
+    if not config.option.slow:
+        setattr(config.option, "markexpr", "not slow")  # noqa
