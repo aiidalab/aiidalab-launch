@@ -7,22 +7,21 @@ Authors:
 import logging
 from dataclasses import dataclass, field
 from pathlib import Path
-from secrets import token_hex
 from textwrap import indent
 
 import click
 import docker
 from tabulate import tabulate
 
-from .core import Config, Profile
-from .util import AiidaLabInstance, get_container, get_docker_client
+from .core import APPLICATION_ID, LOGGER, AiidaLabInstance, Config, Profile, Timeout
+from .util import get_docker_client
 from .version import __version__
 
-APPLICATION_ID = "org.aiidalab.aiidalab_launch"
+MSG_STARTUP = """Open the following URL to access AiiDAlab:
 
-APPLICATION_CONFIG_PATH = Path(click.get_app_dir(APPLICATION_ID)) / "config.toml"
+  {url}
 
-MAIN_PROFILE_NAME = "main"
+Home mounted: {home_mount} -> /home/{system_user}"""
 
 
 LOGGING_LEVELS = {
@@ -33,12 +32,13 @@ LOGGING_LEVELS = {
 }  #: a mapping of `verbose` option counts to logging levels
 
 
-LOGGER = logging.getLogger(APPLICATION_ID.split(".")[-1])
+def _application_config_path():
+    return Path(click.get_app_dir(APPLICATION_ID)) / "config.toml"
 
 
 def _load_config():
     try:
-        return Config.load(APPLICATION_CONFIG_PATH)
+        return Config.load(_application_config_path())
     except FileNotFoundError:
         return Config()
 
@@ -87,7 +87,7 @@ def cli(app_state, verbose):
             fg="yellow",
         )
 
-    LOGGER.info(f"Configuration file path: {APPLICATION_CONFIG_PATH}")
+    LOGGER.info(f"Configuration file path: {_application_config_path()}")
     LOGGER.debug(f"Configuration: \n\n{indent(app_state.config.dumps(), '    ')}")
 
 
@@ -107,8 +107,22 @@ def profiles():
 @profiles.command("list")
 @pass_app_state
 def list_profiles(app_state):
-    """List all configured AiiDAlab profiles."""
-    click.echo("\n".join([profile.name for profile in app_state.config.profiles]))
+    """List all configured AiiDAlab profiles.
+
+    The default profile is shown in bold.
+    """
+    default_profile = app_state.config.default_profile
+    click.echo(
+        "\n".join(
+            [
+                click.style(
+                    profile.name + (" *" if profile.name == default_profile else ""),
+                    bold=profile.name == default_profile,
+                )
+                for profile in app_state.config.profiles
+            ]
+        )
+    )
 
 
 @profiles.command("show")
@@ -117,6 +131,42 @@ def list_profiles(app_state):
 def show_profile(app_state, profile):
     """Show a AiiDAlab profile configuration."""
     click.echo(app_state.config.get_profile(profile).dumps(), nl=False)
+
+
+@profiles.command("add")
+@click.argument("profile")
+@pass_app_state
+@click.pass_context
+def add_profile(ctx, app_state, profile):
+    """Add a new AiiDAlab profile to the configuration."""
+    try:
+        app_state.config.get_profile(profile)
+    except ValueError:
+        pass
+    else:
+        raise click.ClickException(f"Profile with name '{profile}' already exists.")
+
+    new_profile = Profile(name=profile)
+    app_state.config.profiles.append(new_profile)
+    app_state.config.save(_application_config_path())
+    click.echo(f"Added profile '{profile}'.")
+    if click.confirm("Do you want to edit it now?", default=True):
+        ctx.invoke(edit_profile, profile=profile)
+
+
+@profiles.command("remove")
+@click.argument("profile")
+@pass_app_state
+def remove_profile(app_state, profile):
+    """Remove a AiiDAlab profile from the configuration."""
+    try:
+        profile = app_state.config.get_profile(profile)
+    except ValueError:
+        raise click.ClickException(f"Profile with name '{profile}' does not exist.")
+    else:
+        app_state.config.profiles.remove(profile)
+        app_state.config.save(_application_config_path())
+        click.echo(f"Removed profile with name '{profile.name}'.")
 
 
 @profiles.command("edit")
@@ -131,9 +181,24 @@ def edit_profile(app_state, profile):
         if new_profile != current_profile:
             app_state.config.profiles.remove(current_profile)
             app_state.config.profiles.append(new_profile)
-            app_state.config.save(APPLICATION_CONFIG_PATH)
+            app_state.config.save(_application_config_path())
             return
     click.echo("No changes.")
+
+
+@profiles.command("set-default")
+@click.argument("profile")
+@pass_app_state
+def set_default_profile(app_state, profile):
+    """Set a AiiDAlab profile as default."""
+    try:
+        app_state.config.get_profile(profile)
+    except ValueError:
+        raise click.ClickException(f"A profile with name '{profile}' does not exist.")
+    else:
+        app_state.config.default_profile = profile
+        app_state.config.save(_application_config_path())
+        click.echo(f"Set default profile to '{profile}'.")
 
 
 @cli.command()
@@ -142,45 +207,76 @@ def edit_profile(app_state, profile):
     is_flag=True,
     help="Restart the container in case that it is already running.",
 )
+@click.option(
+    "--wait",
+    default=120,
+    show_default=True,
+    help="Time to wait after startup until all services are up. Set to zero to not wait at all and immediately return.",
+)
+@click.option(
+    "--no-browser",
+    is_flag=True,
+    help=(
+        "Do not open AiiDAlab in the browser after startup. "
+        "(This is disabled by default if the wait time is set to zero.)"
+    ),
+)
 @pass_app_state
 @with_profile
-def start(app_state, profile, restart):
+def start(app_state, profile, restart, wait, no_browser):
     """Start an AiiDAlab instance on this host."""
-    client = app_state.docker_client
-    profile.home_mount.mkdir(exist_ok=True)
-
-    mounts = [
-        docker.types.Mount(
-            target=f"/home/{profile.system_user}",
-            source=str(profile.home_mount),
-            type="bind",
-        )
-    ]
-
+    instance = AiidaLabInstance(client=app_state.docker_client, profile=profile)
+    container = instance.container()
     try:
-        try:
-            container = client.containers.get(profile.container_name())
-            if restart:
-                click.echo("Restarting container...", err=True)
-                container.restart()
-        except docker.errors.NotFound:
-            click.echo(f"Pulling image '{profile.image}'...", err=True)
-            image = client.images.pull(profile.image)
-            LOGGER.info(f"Pulled image: {image}")
-
-            click.echo("Starting container...", err=True)
-            container = client.containers.start(
-                image=profile.image,
-                name=profile.container_name(),
-                environment=profile.environment(jupyter_token=token_hex(32)),
-                mounts=mounts,
-                ports={"8888/tcp": profile.port},
-                detach=True,
-                remove=True,
+        if container is None:
+            click.echo(f"Pulling image '{instance.profile.image}'...", err=True)
+            instance.pull()
+            click.echo("Starting container (this may take a while)...", err=True)
+            instance.start()
+        elif restart:
+            click.echo("Restarting container (this may take a while)...", err=True)
+            instance.restart()
+        else:
+            click.echo(
+                "AiiDAlab was already running, use --restart to restart it.", err=True
             )
-            LOGGER.info(f"Started container: {container}")
-    except docker.errors.ImageNotFound as error:
-        raise click.ClickException(f"Failed to start: {error}")
+    except Timeout:
+        raise click.ClickException(
+            f"AiiDAlab instance did not start up within the provided wait period ({wait})."
+        )
+    except docker.errors.APIError as error:
+        LOGGER.debug(f"Error during startup: {error}")
+        if instance.profile.port and "port is already allocated" in str(error):
+            raise click.ClickException(
+                f"Port {instance.profile.port} is already allocated, choose another port "
+                f"for example, by editing the profile: aiidalab-launch profiles edit {instance.profile.name}"
+            )
+        raise click.ClickException("Startup failed due to an unexpected error.")
+    except RuntimeError as error:
+        raise click.ClickException(str(error))
+    else:
+        if wait:
+            instance.wait_for_services(timeout=wait)
+            url = instance.url()
+            click.secho(
+                MSG_STARTUP.format(
+                    url=instance.url(),
+                    home_mount=instance.profile.home_mount,
+                    system_user=instance.profile.system_user,
+                ),
+                fg="green",
+            )
+            if not no_browser:
+                if click.confirm(
+                    "Do you want to open AiiDAlab in the browser now?", default=True
+                ):
+                    click.launch(url)
+        else:
+            click.secho(
+                "Use 'aiidalab-launch status' to check the AiiDAlab instance "
+                "status and URL to open it.",
+                fg="green",
+            )
 
 
 @cli.command()
@@ -201,15 +297,30 @@ def start(app_state, profile, restart):
 @with_profile
 def stop(app_state, profile, remove, timeout):
     """Stop an AiiDAlab instance on this host."""
-    client = app_state.docker_client
-    container = get_container(client, profile.container_name())
+    instance = AiidaLabInstance(client=app_state.docker_client, profile=profile)
     click.echo("Stopping AiiDAlab... ", nl=False, err=True)
-    container.stop(timeout=20)
+    instance.stop(timeout=timeout)
     click.echo("stopped.", err=True)
     if remove:
         click.echo("Removing container... ", nl=False, err=True)
-        container.remove()
+        instance.remove()
         click.echo("done.", err=True)
+
+
+@cli.command("logs")
+@click.option("-f", "--follow", is_flag=True, help="Follow log output.")
+@pass_app_state
+@with_profile
+def logs(app_state, profile, follow):
+    """Show the logs of a running AiiDAlab instance."""
+    instance = AiidaLabInstance(client=app_state.docker_client, profile=profile)
+    try:
+        for chunk in instance.logs(stream=True, follow=follow):
+            click.echo(chunk, nl=False)
+    except RuntimeError:
+        raise click.ClickException("AiiDAlab instance was not created.")
+    except KeyboardInterrupt:
+        pass
 
 
 @cli.command("status")
@@ -218,29 +329,31 @@ def status(app_state):
     """Show AiiDAlab instance status and entry point."""
     client = app_state.docker_client
 
-    # Collect status of each profile
-    click.echo("Collecting status info...", err=True)
-    headers = ["Profile", "Container", "Status", "URL"]
+    # Collect status for each profile
+    headers = ["Profile", "Container", "Status", "Mount", "URL"]
     rows = []
-    for instance in (
+    instances = (
         AiidaLabInstance(client=client, profile=profile)
         for profile in app_state.config.profiles
-    ):
-        instance_status = instance.status()
-        rows.append(
-            [
-                instance.profile.name,
-                instance.profile.container_name(),
-                {AiidaLabInstance.AiidaLabInstanceStatus.STARTING: "starting..."}.get(
-                    instance_status, instance_status.name.lower()
-                ),
-                (
-                    instance.url()
-                    if instance_status is AiidaLabInstance.AiidaLabInstanceStatus.UP
-                    else ""
-                ),
-            ]
-        )
+    )
+    with click.progressbar(instances, label="Collecting status info") as bar:
+        for instance in bar:
+            instance_status = instance.status()
+            rows.append(
+                [
+                    instance.profile.name,
+                    instance.profile.container_name(),
+                    {
+                        AiidaLabInstance.AiidaLabInstanceStatus.STARTING: "starting..."
+                    }.get(instance_status, instance_status.name.lower()),
+                    instance.profile.home_mount,
+                    (
+                        instance.url()
+                        if instance_status is AiidaLabInstance.AiidaLabInstanceStatus.UP
+                        else ""
+                    ),
+                ]
+            )
 
     click.echo(tabulate(rows, headers=headers))
 
@@ -259,22 +372,16 @@ def exec(ctx, profile, cmd, privileged, forward_exit_code):
         aiidalab-launch exec aiidalab list
 
     """
-    client = ctx.find_object(ApplicationState).docker_client
-    container = get_container(client, profile.container_name())
+    app_state = ctx.ensure_object(ApplicationState)
+    instance = AiidaLabInstance(client=app_state.docker_client, profile=profile)
 
-    LOGGER.info(f"Executing: {' '.join(cmd)}")
-    exec_id = client.api.exec_create(
-        container.id,
-        " ".join(cmd),
-        user=None if privileged else profile.system_user,
-        workdir=None if privileged else f"/home/{profile.system_user}",
-    )["Id"]
+    exec_id = instance.exec_create(" ".join(cmd), privileged=privileged)
 
-    output = client.api.exec_start(exec_id, stream=True)
+    output = app_state.docker_client.api.exec_start(exec_id, stream=True)
     for chunk in output:
         click.echo(chunk.decode(), nl=False)
 
-    result = client.api.exec_inspect(exec_id)
+    result = app_state.docker_client.api.exec_inspect(exec_id)
     if result["ExitCode"] != 0:
         if forward_exit_code:
             ctx.exit(result["ExitCode"])
