@@ -8,12 +8,11 @@
 This is the test module for the project's command-line interface (CLI)
 module.
 """
-# fmt: on
 from click.testing import CliRunner, Result
 
-# fmt: off
 import aiidalab_launch.__main__ as cli
 from aiidalab_launch import __version__
+from aiidalab_launch.core import Profile
 
 # To learn more about testing Click applications, visit the link below.
 # http://click.pocoo.org/5/testing/
@@ -38,4 +37,16 @@ def test_version_displays_expected_message():
     """
     runner: CliRunner = CliRunner()
     result: Result = runner.invoke(cli.cli, ["version"])
-    assert 'AiiDAlab Launch' in result.output.strip()
+    assert "AiiDAlab Launch" in result.output.strip()
+
+
+def test_list_profiles():
+    runner: CliRunner = CliRunner()
+    result: Result = runner.invoke(cli.cli, ["profiles", "list"])
+    assert "default" in result.output.strip()
+
+
+def test_show_profile():
+    runner: CliRunner = CliRunner()
+    result: Result = runner.invoke(cli.cli, ["profiles", "show", "default"])
+    assert Profile.loads("default", result.output) == Profile()
