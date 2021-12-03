@@ -36,10 +36,17 @@ LOGGING_LEVELS = {
 LOGGER = logging.getLogger(APPLICATION_ID.split(".")[-1])
 
 
+def _load_config():
+    try:
+        return Config.load(APPLICATION_CONFIG_PATH)
+    except FileNotFoundError:
+        return Config()
+
+
 @dataclass
 class ApplicationState:
 
-    config: Config = field(default_factory=lambda: Config.load(APPLICATION_CONFIG_PATH))
+    config: Config = field(default_factory=_load_config)
     docker_client: docker.DockerClient = field(default_factory=get_docker_client)
 
 
