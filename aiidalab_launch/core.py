@@ -6,7 +6,7 @@ from dataclasses import asdict, dataclass, field
 from enum import Enum, auto
 from pathlib import Path
 from secrets import token_hex
-from typing import Optional
+from typing import List, Optional
 from uuid import uuid4
 
 import docker
@@ -37,7 +37,7 @@ def _default_port():  # explicit function required to enable test patching
 class Profile:
     name: str = MAIN_PROFILE_NAME
     port: Optional[int] = field(default_factory=_default_port)
-    default_apps: list[str] = field(default_factory=lambda: ["aiidalab-widgets-base"])
+    default_apps: List[str] = field(default_factory=lambda: ["aiidalab-widgets-base"])
     system_user: str = "aiida"
     image: str = "aiidalab/aiidalab-docker-stack:latest"
     home_mount: Optional[str] = field(default_factory=lambda: _default_home_mount())
@@ -62,7 +62,7 @@ class Profile:
 
 @dataclass
 class Config:
-    profiles: list[Profile] = field(default_factory=lambda: [Profile()])
+    profiles: List[Profile] = field(default_factory=lambda: [Profile()])
     default_profile: str = MAIN_PROFILE_NAME
 
     @classmethod
