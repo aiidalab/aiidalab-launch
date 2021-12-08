@@ -214,6 +214,15 @@ def set_default_profile(app_state, profile):
     help="Time to wait after startup until all services are up. Set to zero to not wait at all and immediately return.",
 )
 @click.option(
+    "--pull/--no-pull",
+    default=True,
+    help=(
+        "Specify whether to pull the configured image prior to the first start "
+        "of the container."
+    ),
+    show_default=True,
+)
+@click.option(
     "--no-browser",
     is_flag=True,
     help=(
@@ -223,14 +232,16 @@ def set_default_profile(app_state, profile):
 )
 @pass_app_state
 @with_profile
-def start(app_state, profile, restart, wait, no_browser):
+def start(app_state, profile, restart, wait, pull, no_browser):
     """Start an AiiDAlab instance on this host."""
+
     instance = AiidaLabInstance(client=app_state.docker_client, profile=profile)
     container = instance.container()
     try:
         if container is None:
-            click.echo(f"Pulling image '{instance.profile.image}'...", err=True)
-            instance.pull()
+            if pull:
+                click.echo(f"Pulling image '{instance.profile.image}'...", err=True)
+                instance.pull()
             click.echo("Starting container (this may take a while)...", err=True)
             instance.start()
         elif restart:
