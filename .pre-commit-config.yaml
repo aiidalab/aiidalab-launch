@@ -42,3 +42,8 @@ repos:
       hooks:
           - id: isort
             args: [--profile, black, --filter-files]
+
+    - repo: https://github.com/sirosen/check-jsonschema
+      rev: 0.9.0
+      hooks:
+          - id: check-github-workflows
