@@ -68,7 +68,6 @@ jobs:
                   files: |
                       dist/*
                   generate_release_notes: true
-                  draft: true
 
             - name: Publish distribution on PyPI
               uses: pypa/gh-action-pypi-publish@release/v1
