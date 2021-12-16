@@ -105,6 +105,7 @@ class Config:
 class AiidaLabInstance:
     class AiidaLabInstanceStatus(Enum):
         UNKNOWN = auto()
+        CREATED = auto()
         DOWN = auto()
         UP = auto()
         STARTING = auto()
@@ -144,6 +145,7 @@ class AiidaLabInstance:
             LOGGER.info(f"Ensure home mount point ({self.profile.home_mount}) exists.")
             Path(self.profile.home_mount).mkdir(exist_ok=True)
         LOGGER.info(f"Starting container '{self.profile.container_name}'...")
+
         container = self.client.containers.run(
             image=self.profile.image,
             name=self.profile.container_name(),
@@ -156,7 +158,7 @@ class AiidaLabInstance:
         LOGGER.info(f"Started container: {container.name} ({container.id}).")
 
     def restart(self, timeout=None):
-        raise NotImplementedError()
+        self.container().restart()
 
     def stop(self, timeout=None):
         try:
@@ -212,6 +214,8 @@ class AiidaLabInstance:
                 return self.AiidaLabInstanceStatus.UNKNOWN
             else:
                 return self.AiidaLabInstanceStatus.UP
+        elif container and container.status == "created":
+            return self.AiidaLabInstanceStatus.CREATED
         return self.AiidaLabInstanceStatus.DOWN
 
     def jupyter_token(self) -> Optional[str]:

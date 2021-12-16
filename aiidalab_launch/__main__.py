@@ -232,21 +232,39 @@ def start(app_state, profile, restart, wait, pull, no_browser):
     """Start an AiiDAlab instance on this host."""
 
     instance = AiidaLabInstance(client=app_state.docker_client, profile=profile)
-    container = instance.container()
     try:
-        if container is None:
+        if instance.container() is None:
             if pull:
                 click.echo(f"Pulling image '{instance.profile.image}'...", err=True)
                 instance.pull()
+            else:
+                raise click.ClickException(
+                    f"Unable to find container '{instance.profile.container_name()}'. "
+                    "Use '--pull' to pull the image prior to start."
+                )
+
+        InstanceStatus = instance.AiidaLabInstanceStatus  # local alias for brevity
+
+        status = instance.status()
+        if status is InstanceStatus.DOWN:
             click.echo("Starting container (this may take a while)...", err=True)
             instance.start()
-        elif restart:
+        elif status is InstanceStatus.CREATED:
+            click.echo(
+                "Starting previously created container (this may take a while)...",
+                err=True,
+            )
+            instance.restart()
+        elif status is InstanceStatus.UP and restart:
             click.echo("Restarting container (this may take a while)...", err=True)
             instance.restart()
-        else:
+        elif status is InstanceStatus.UP and not restart:
             click.echo(
-                "AiiDAlab was already running, use --restart to restart it.", err=True
+                "Container was already running, use --restart to restart it.", err=True
             )
+        elif status is InstanceStatus.STARTING:
+            click.echo("Container is already starting up...", err=True)
+
     except Timeout:
         raise click.ClickException(
             f"AiiDAlab instance did not start up within the provided wait period ({wait})."
