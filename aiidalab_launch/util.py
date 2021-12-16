@@ -7,10 +7,11 @@ import click
 import docker
 
 MSG_UNABLE_TO_COMMUNICATE_WITH_CLIENT = (
-    "Unable to communicate with docker on this host. This error usually "
-    "indicates that Docker is not actually installed on this system or that the "
-    "installation is ill-configured. Please follow the instructions at "
-    "https://docs.docker.com/get-docker/ to install docker."
+    "Unable to communicate with docker on this host. This error usually indicates "
+    "that Docker is either not installed on this system, that the docker service is "
+    "not started, or that the installation is ill-configured.  Please follow the "
+    "instructions at https://docs.docker.com/get-docker/ to install and start "
+    "docker."
 )
 
 
