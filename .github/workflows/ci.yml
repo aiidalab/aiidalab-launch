@@ -1,49 +1,50 @@
+---
 name: continuous-integration
 
 on: [push, pull_request]
 
 jobs:
 
-  pre-commit:
+    pre-commit:
 
-    runs-on: ubuntu-latest
+        runs-on: ubuntu-latest
 
-    steps:
-    - uses: actions/checkout@v2
-    - name: Set up Python 3.10
-      uses: actions/setup-python@v2
-      with:
-        python-version: "3.10"
-    - uses: pre-commit/action@v2.0.0
+        steps:
+            - uses: actions/checkout@v2
+            - name: Set up Python 3.10
+              uses: actions/setup-python@v2
+              with:
+                  python-version: '3.10'
+            - uses: pre-commit/action@v2.0.0
 
-  test-package:
+    test-package:
 
-    needs: [pre-commit]
+        needs: [pre-commit]
 
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
+        runs-on: ubuntu-latest
+        timeout-minutes: 10
 
-    strategy:
-      fail-fast: false
-      matrix:
-        python-version: ['3.7', '3.8', '3.9', '3.10']
+        strategy:
+            fail-fast: false
+            matrix:
+                python-version: ['3.7', '3.8', '3.9', '3.10']
 
-    steps:
+        steps:
 
-      - uses: actions/checkout@v2
-        with:
-          fetch-depth: 0
-          submodules: true
+            - uses: actions/checkout@v2
+              with:
+                  fetch-depth: 0
+                  submodules: true
 
-      - uses: actions/setup-python@v2
-        with:
-          python-version: ${{ matrix.python-version }}
+            - uses: actions/setup-python@v2
+              with:
+                  python-version: ${{ matrix.python-version }}
 
-      - name: Install package
-        run: |
-          which python
-          python -m pip install -e .[tests]
-          python -m pip freeze
+            - name: Install package
+              run: |
+                  which python
+                  python -m pip install -e .[tests]
+                  python -m pip freeze
 
-      - name: Run tests
-        run: python -m pytest -v --slow
+            - name: Run tests
+              run: python -m pytest -v --slow
