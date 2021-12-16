@@ -49,6 +49,10 @@ A. V. Yakutovich et al., Comp. Mat. Sci. 188, 110165 (2021).
 
 aiidalab@materialscloud.org
 
+## Maintainers:
+
+To create a new release, clone the repository, and then execute `bumpver update`.
+The release tag (a, b, rc) is determined from the last tag, use the `--tag` option to switch the release tag.
 
 ## MIT License
 

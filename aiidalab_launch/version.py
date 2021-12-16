@@ -8,4 +8,11 @@ This module contains project version information.
 .. moduleauthor:: Carl Simon Adorf <simon.adorf@epfl.ch>
 """
 
-__version__ = "0.0.1"
+try:
+    from dunamai import Version, get_version
+
+    __version__ = Version.from_git().serialize()
+except RuntimeError:
+    __version__ = get_version("aiidalab-launch").serialize()
+except ImportError:
+    __version__ = "v2021.1001a0"
