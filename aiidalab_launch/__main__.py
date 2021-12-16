@@ -7,7 +7,6 @@ Authors:
 import logging
 from dataclasses import dataclass, field
 from pathlib import Path
-from textwrap import indent
 
 import click
 import docker
@@ -72,8 +71,7 @@ def with_profile(cmd):
     count=True,
     help="Provide this option to increase the output verbosity of the launcher.",
 )
-@pass_app_state
-def cli(app_state, verbose):
+def cli(verbose):
     # Use the verbosity count to determine the logging level...
     if verbose > 0:
         logging.basicConfig(
@@ -88,12 +86,10 @@ def cli(app_state, verbose):
         )
 
     LOGGER.info(f"Configuration file path: {_application_config_path()}")
-    LOGGER.debug(f"Configuration: \n\n{indent(app_state.config.dumps(), '    ')}")
 
 
 @cli.command()
-@click.pass_context
-def version(ctx):
+def version():
     """Show the version of aiidalab-launch."""
     click.echo(click.style(f"AiiDAlab Launch {__version__}", bold=True))
 

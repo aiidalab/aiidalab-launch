@@ -4,6 +4,7 @@ from textwrap import wrap
 from threading import Thread
 
 import click
+import click_spinner
 import docker
 
 MSG_UNABLE_TO_COMMUNICATE_WITH_CLIENT = (
@@ -15,9 +16,19 @@ MSG_UNABLE_TO_COMMUNICATE_WITH_CLIENT = (
 )
 
 
-def get_docker_client():
+def get_docker_client(timeout=10):
     try:
-        return docker.from_env()
+        try:
+            # Make first attempt with very short timeout.
+            return docker.from_env(timeout=1)
+        except docker.errors.DockerException as error:
+            if "ConnectTimeoutError" in str(error):
+                # Second attempt with longer timeout and user indication.
+                click.echo("Connecting to docker host...", err=True)
+                with click_spinner.spinner():
+                    return docker.from_env(timeout=timeout)
+            else:
+                raise  # unrelated error, escalate immediately
     except docker.errors.DockerException as error:
         click.secho(
             "\n".join(wrap(MSG_UNABLE_TO_COMMUNICATE_WITH_CLIENT)),
