@@ -48,10 +48,18 @@ A. V. Yakutovich et al., Comp. Mat. Sci. 188, 110165 (2021).
 
 aiidalab@materialscloud.org
 
-## Maintainers:
+## For maintainers
 
-To create a new release, clone the repository, and then execute `bumpver update`.
-The release tag (a, b, rc) is determined from the last tag, use the `--tag` option to switch the release tag.
+To create a new release, clone the repository, and then execute `bumpver update`, this will:
+
+  1. Create a tagged release with bumped version and push it to the repository.
+  2. Trigger a GitHub actions workflow that creates a GitHub release and publishes it on PyPI.
+
+Additional notes:
+
+  - Use the `--dry` option to preview the release change.
+  - The release tag (e.g. a/b/rc) is determined from the last release.
+    Use the `--tag` option to switch the release tag.
 
 ## MIT License
 
