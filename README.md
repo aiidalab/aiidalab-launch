@@ -10,8 +10,7 @@ To use AiiDAlab launch you will have to
 2. Install AiiDAlab launch and start AiiDAlab with
 
     ```bash
-    # pip install aiidalab-launch  # not published yet
-    pip install git+https://github.com/aiidalab/aiidalab-launch.git
+    pip install aiidalab-launch
     aiidalab-launch start
     ```
 3. Follow the instructions on screen to open AiiDAlab in the browser.
