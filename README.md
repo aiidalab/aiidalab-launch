@@ -69,7 +69,8 @@ aiidalab@materialscloud.org
 
 ## For maintainers
 
-To create a new release, clone the repository, and then execute `bumpver update`, this will:
+To create a new release, clone the repository, install development dependencies with `pip install -e '.[dev]'`, and then execute `bumpver update`.
+This will:
 
   1. Create a tagged release with bumped version and push it to the repository.
   2. Trigger a GitHub actions workflow that creates a GitHub release and publishes it on PyPI.
