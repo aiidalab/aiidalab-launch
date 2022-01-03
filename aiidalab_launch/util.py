@@ -1,11 +1,15 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
+import asyncio
+from contextlib import contextmanager
 from textwrap import wrap
 from threading import Thread
 
 import click
 import click_spinner
 import docker
+
+from .future import to_thread  # asyncio.to_thread introduced in py 3.9
 
 MSG_UNABLE_TO_COMMUNICATE_WITH_CLIENT = (
     "Unable to communicate with docker on this host. This error usually indicates "
@@ -16,19 +20,43 @@ MSG_UNABLE_TO_COMMUNICATE_WITH_CLIENT = (
 )
 
 
-def get_docker_client(timeout=10):
+@contextmanager
+def spinner(msg=None, final=None):
+    """Display spinner with optional messaging."""
+    if msg:
+        click.echo(f"{msg.rstrip()} ", nl=False, err=True)
+    with click_spinner.spinner():
+        yield
+    if msg:
+        click.echo(final or "done.", err=True)
+
+
+@contextmanager
+def spinner_after_delay(delay, *args, **kwargs):
+    """Display spinner in async context with optional initial delay."""
+
+    async def spin_forever():
+        await asyncio.sleep(delay)
+        with spinner(*args, **kwargs):
+            try:
+                while True:  # wait forever
+                    await asyncio.sleep(60)
+            except asyncio.CancelledError:
+                return
+
+    spinner_ = asyncio.create_task(spin_forever())
+    yield
+    spinner_.cancel()
+
+
+async def _get_docker_client(spinner_delay, *args, **kwargs):
+    with spinner_after_delay(spinner_delay, "Connecting to docker host..."):
+        return await to_thread(docker.from_env, *args, **kwargs)
+
+
+def get_docker_client(spinner_delay=0.2, *args, **kwargs):
     try:
-        try:
-            # Make first attempt with very short timeout.
-            return docker.from_env(timeout=1)
-        except docker.errors.DockerException as error:
-            if "ConnectTimeoutError" in str(error):
-                # Second attempt with longer timeout and user indication.
-                click.echo("Connecting to docker host...", err=True)
-                with click_spinner.spinner():
-                    return docker.from_env(timeout=timeout)
-            else:
-                raise  # unrelated error, escalate immediately
+        return asyncio.run(_get_docker_client(spinner_delay, *args, **kwargs))
     except docker.errors.DockerException as error:
         click.secho(
             "\n".join(wrap(MSG_UNABLE_TO_COMMUNICATE_WITH_CLIENT)),
