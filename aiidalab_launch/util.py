@@ -9,6 +9,8 @@ import click
 import click_spinner
 import docker
 
+from .future import to_thread  # asyncio.to_thread introduced in py 3.9
+
 MSG_UNABLE_TO_COMMUNICATE_WITH_CLIENT = (
     "Unable to communicate with docker on this host. This error usually indicates "
     "that Docker is either not installed on this system, that the docker service is "
@@ -49,7 +51,7 @@ def spinner_after_delay(delay, *args, **kwargs):
 
 async def _get_docker_client(spinner_delay, *args, **kwargs):
     with spinner_after_delay(spinner_delay, "Connecting to docker host..."):
-        return await asyncio.to_thread(docker.from_env, *args, **kwargs)
+        return await to_thread(docker.from_env, *args, **kwargs)
 
 
 def get_docker_client(spinner_delay=0.2, *args, **kwargs):

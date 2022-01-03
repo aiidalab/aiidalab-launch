@@ -9,3 +9,5 @@ include CHANGELOG.md
 include LICENSE
 include README.md
 recursive-include logos *.png
+
+include aiidalab_launch/future/LICENSE
