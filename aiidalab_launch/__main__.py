@@ -235,8 +235,10 @@ def start(app_state, profile, restart, wait, pull, no_browser):
     try:
         if instance.container() is None:
             if pull:
-                click.echo(f"Pulling image '{instance.profile.image}'...", err=True)
-                instance.pull()
+                with spinner(
+                    f"Downloading image '{instance.profile.image}' (this may take a while)..."
+                ):
+                    instance.pull()
             else:
                 raise click.ClickException(
                     f"Unable to find container '{instance.profile.container_name()}'. "
@@ -247,17 +249,14 @@ def start(app_state, profile, restart, wait, pull, no_browser):
 
         status = instance.status()
         if status is InstanceStatus.DOWN:
-            click.echo("Starting container (this may take a while)...", err=True)
-            instance.start()
+            with spinner("Starting container..."):
+                instance.start()
         elif status is InstanceStatus.CREATED:
-            click.echo(
-                "Starting previously created container (this may take a while)...",
-                err=True,
-            )
-            instance.restart()
+            with spinner("Starting previously created container..."):
+                instance.restart()
         elif status is InstanceStatus.UP and restart:
-            click.echo("Restarting container (this may take a while)...", err=True)
-            instance.restart()
+            with spinner("Restarting container..."):
+                instance.restart()
         elif status is InstanceStatus.UP and not restart:
             click.echo(
                 "Container was already running, use --restart to restart it.", err=True
@@ -277,11 +276,16 @@ def start(app_state, profile, restart, wait, pull, no_browser):
                 f"for example, by editing the profile: aiidalab-launch profiles edit {instance.profile.name}"
             )
         raise click.ClickException("Startup failed due to an unexpected error.")
-    except RuntimeError as error:
-        raise click.ClickException(str(error))
+    except TimeoutError:
+        raise click.ClickException(
+            "AiiDAlab instance did not start up within the excepted wait period."
+        )
+    except Exception as error:
+        raise click.ClickException(f"Unknown error occurred: {error}")
     else:
         if wait:
-            instance.wait_for_services(timeout=wait)
+            with spinner("Waiting for AiiDAlab services to start..."):
+                instance.wait_for_services(timeout=wait)
             url = instance.url()
             click.secho(
                 MSG_STARTUP.format(
@@ -361,8 +365,9 @@ def status(app_state):
         AiidaLabInstance(client=client, profile=profile)
         for profile in app_state.config.profiles
     )
-    with click.progressbar(instances, label="Collecting status info") as bar:
-        for instance in bar:
+
+    with spinner("Collecting status info...", delay=0.5):
+        for instance in instances:
             instance_status = instance.status()
             rows.append(
                 [
