@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
+import webbrowser
 from contextlib import contextmanager
 from textwrap import wrap
 from threading import Event, Thread, Timer
@@ -79,3 +80,18 @@ def wait_for_services(container, timeout=None):
         )
     elif thread.is_alive():
         raise Timeout
+
+
+def webbrowser_available():
+    """Check whether a webbrowser is available.
+
+    Useful to provide more targeted user feedback, e.g., when AiiDAlab is
+    executed on a headless node via ssh.
+    """
+
+    try:
+        webbrowser.get()
+    except webbrowser.Error:
+        return False
+    else:
+        return True
