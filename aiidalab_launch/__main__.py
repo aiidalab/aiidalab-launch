@@ -152,17 +152,21 @@ def add_profile(ctx, app_state, profile):
 
 @profiles.command("remove")
 @click.argument("profile")
+@click.option("--yes", is_flag=True, help="Do not ask for confirmation.")
 @pass_app_state
-def remove_profile(app_state, profile):
+def remove_profile(app_state, profile, yes):
     """Remove a AiiDAlab profile from the configuration."""
     try:
         profile = app_state.config.get_profile(profile)
     except ValueError:
         raise click.ClickException(f"Profile with name '{profile}' does not exist.")
     else:
-        app_state.config.profiles.remove(profile)
-        app_state.config.save(_application_config_path())
-        click.echo(f"Removed profile with name '{profile.name}'.")
+        if yes or click.confirm(
+            f"Are you sure you want to remove profile '{profile.name}'?"
+        ):
+            app_state.config.profiles.remove(profile)
+            app_state.config.save(_application_config_path())
+            click.echo(f"Removed profile with name '{profile.name}'.")
 
 
 @profiles.command("edit")
