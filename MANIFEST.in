@@ -8,4 +8,5 @@ include .coveragerc
 include CHANGELOG.md
 include LICENSE
 include README.md
+include ssh-forward.md
 recursive-include logos *.png

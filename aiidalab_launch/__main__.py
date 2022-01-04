@@ -4,7 +4,9 @@
 Authors:
     * Carl Simon Adorf <simon.adorf@epfl.ch>
 """
+import getpass
 import logging
+import socket
 from dataclasses import dataclass, field
 from pathlib import Path
 from textwrap import wrap
@@ -14,8 +16,14 @@ import docker
 from tabulate import tabulate
 
 from .core import APPLICATION_ID, LOGGER, AiidaLabInstance, Config, Profile, Timeout
-from .util import get_docker_client, spinner
+from .util import get_docker_client, spinner, webbrowser_available
 from .version import __version__
+
+MSG_MOUNT_POINT_CONFLICT = """Warning: There is at least one other running
+instance that has the same home mount point ('{home_mount}') as the instance
+you are currently trying to start. Are you sure you want to continue? This may
+lead to data corruption."""
+
 
 MSG_STARTUP = """Open the following URL to access AiiDAlab:
 
@@ -24,10 +32,22 @@ MSG_STARTUP = """Open the following URL to access AiiDAlab:
 Home mounted: {home_mount} -> /home/{system_user}"""
 
 
-MSG_MOUNT_POINT_CONFLICT = """Warning: There is at least one other running
-instance that has the same home mount point ('{home_mount}') as the instance
-you are currently trying to start. Are you sure you want to continue? This may
-lead to data corruption."""
+MSG_STARTUP_SSH = """
+Unable to detect a web browser which indicates that you might be running
+AiiDAlab on a remote machine. If this is the case, consider to create an SSH
+tunnel to access AiiDAlab on your local computer. For this, run a command
+similar to
+
+  ssh {user}@{hostname} -NfL {port}:localhost:{port}
+
+on your local computer, then open AiiDAlab on your local computer at
+
+  {url}
+
+See https://github.com/aiidalab/aiidalab-launch/blob/main/ssh-forward.md for
+more detailed instructions on SSH port forwarding.
+
+Home mounted: {home_mount} -> /home/{system_user}"""
 
 
 LOGGING_LEVELS = {
@@ -256,11 +276,17 @@ def _find_mount_point_conflict(client, profile, other_profiles):
     ),
 )
 @click.option(
+    "--show-ssh-port-forwarding-help",
+    "show_ssh_help",
+    is_flag=True,
+    help="Show guidance on SSH port forwarding.",
+)
+@click.option(
     "-f", "--force", is_flag=True, help="Ignore any warnings and start anyways."
 )
 @pass_app_state
 @with_profile
-def start(app_state, profile, restart, wait, pull, no_browser, force):
+def start(app_state, profile, restart, wait, pull, no_browser, show_ssh_help, force):
     """Start an AiiDAlab instance on this host."""
 
     instance = AiidaLabInstance(client=app_state.docker_client, profile=profile)
@@ -337,19 +363,28 @@ def start(app_state, profile, restart, wait, pull, no_browser, force):
             with spinner("Waiting for AiiDAlab services to start..."):
                 instance.wait_for_services(timeout=wait)
             url = instance.url()
+            msg_startup = (
+                MSG_STARTUP_SSH
+                if (show_ssh_help or not webbrowser_available())
+                else MSG_STARTUP
+            )
             click.secho(
-                MSG_STARTUP.format(
+                msg_startup.format(
                     url=instance.url(),
                     home_mount=instance.profile.home_mount,
                     system_user=instance.profile.system_user,
-                ),
+                    user=getpass.getuser(),
+                    port=instance.profile.port,
+                    hostname=socket.getfqdn(),
+                ).lstrip(),
                 fg="green",
             )
-            if not no_browser:
+            if not no_browser and webbrowser_available():
                 if click.confirm(
                     "Do you want to open AiiDAlab in the browser now?", default=True
                 ):
                     click.launch(url)
+
         else:
             click.secho(
                 "Use 'aiidalab-launch status' to check the AiiDAlab instance "
