@@ -455,7 +455,8 @@ def exec(ctx, profile, cmd, privileged, forward_exit_code):
     app_state = ctx.ensure_object(ApplicationState)
     instance = AiidaLabInstance(client=app_state.docker_client, profile=profile)
     try:
-        exec_id = instance.exec_create(" ".join(cmd), privileged=privileged)
+        with spinner("Send command to container...", delay=1.0):
+            exec_id = instance.exec_create(" ".join(cmd), privileged=privileged)
     except RuntimeError:
         raise click.ClickException("AiiDAlab instance is not available. Is it running?")
 
