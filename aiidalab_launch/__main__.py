@@ -13,7 +13,7 @@ import docker
 from tabulate import tabulate
 
 from .core import APPLICATION_ID, LOGGER, AiidaLabInstance, Config, Profile, Timeout
-from .util import get_docker_client
+from .util import get_docker_client, spinner
 from .version import __version__
 
 MSG_STARTUP = """Open the following URL to access AiiDAlab:
@@ -323,13 +323,13 @@ def start(app_state, profile, restart, wait, pull, no_browser):
 def stop(app_state, profile, remove, timeout):
     """Stop an AiiDAlab instance on this host."""
     instance = AiidaLabInstance(client=app_state.docker_client, profile=profile)
-    click.echo("Stopping AiiDAlab... ", nl=False, err=True)
-    instance.stop(timeout=timeout)
-    click.echo("stopped.", err=True)
+    status = instance.status()
+    if status is instance.AiidaLabInstanceStatus.UP:
+        with spinner("Stopping AiiDAlab...", final="stopped."):
+            instance.stop(timeout=timeout)
     if remove:
-        click.echo("Removing container... ", nl=False, err=True)
-        instance.remove()
-        click.echo("done.", err=True)
+        with spinner("Removing container..."):
+            instance.remove()
 
 
 @cli.command("logs")
