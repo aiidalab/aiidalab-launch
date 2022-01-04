@@ -38,15 +38,14 @@ AiiDAlab on a remote machine. If this is the case, consider to create an SSH
 tunnel to access AiiDAlab on your local computer. For this, run a command
 similar to
 
-    ssh {user}@{hostname} -NfL {port}:localhost:{port}
+  ssh {user}@{hostname} -NfL {port}:localhost:{port}
 
-on your local computer. See here for detailed instructions:
-
-  https://github.com/aiidalab/aiidalab-launch/blob/main/ssh-forward.md
-
-Then open AiiDAlab on your local computer at
+on your local computer, then open AiiDAlab on your local computer at
 
   {url}
+
+See https://github.com/aiidalab/aiidalab-launch/blob/main/ssh-forward.md for
+more detailed instructions on SSH port forwarding.
 
 Home mounted: {home_mount} -> /home/{system_user}"""
 
