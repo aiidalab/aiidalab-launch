@@ -1,15 +1,12 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-import asyncio
 from contextlib import contextmanager
 from textwrap import wrap
-from threading import Thread
+from threading import Event, Thread
 
 import click
 import click_spinner
 import docker
-
-from .future import to_thread  # asyncio.to_thread introduced in py 3.9
 
 MSG_UNABLE_TO_COMMUNICATE_WITH_CLIENT = (
     "Unable to communicate with docker on this host. This error usually indicates "
@@ -21,42 +18,30 @@ MSG_UNABLE_TO_COMMUNICATE_WITH_CLIENT = (
 
 
 @contextmanager
-def spinner(msg=None, final=None):
-    """Display spinner with optional messaging."""
-    if msg:
-        click.echo(f"{msg.rstrip()} ", nl=False, err=True)
-    with click_spinner.spinner():
-        yield
-    if msg:
-        click.echo(final or "done.", err=True)
+def spinner(msg=None, final=None, delay=0):
+    """Display spinner only after an optional initial delay."""
 
+    def spin():
+        if not stop.wait(delay):
+            if msg:
+                click.echo(f"{msg.rstrip()} ", nl=False, err=True)
+            with click_spinner.spinner():
+                stop.wait()  # wait until stopped
+            if msg:
+                click.echo(final or "done.", err=True)
 
-@contextmanager
-def spinner_after_delay(delay, *args, **kwargs):
-    """Display spinner in async context with optional initial delay."""
-
-    async def spin_forever():
-        await asyncio.sleep(delay)
-        with spinner(*args, **kwargs):
-            try:
-                while True:  # wait forever
-                    await asyncio.sleep(60)
-            except asyncio.CancelledError:
-                return
-
-    spinner_ = asyncio.create_task(spin_forever())
+    stop = Event()
+    thread = Thread(target=spin)
+    thread.start()
     yield
-    spinner_.cancel()
+    stop.set()
+    thread.join()
 
 
-async def _get_docker_client(spinner_delay, *args, **kwargs):
-    with spinner_after_delay(spinner_delay, "Connecting to docker host..."):
-        return await to_thread(docker.from_env, *args, **kwargs)
-
-
-def get_docker_client(spinner_delay=0.2, *args, **kwargs):
+def get_docker_client(*args, **kwargs):
     try:
-        return asyncio.run(_get_docker_client(spinner_delay, *args, **kwargs))
+        with spinner("Connecting to docker host...", delay=0.2):
+            return docker.from_env(*args, **kwargs)
     except docker.errors.DockerException as error:
         click.secho(
             "\n".join(wrap(MSG_UNABLE_TO_COMMUNICATE_WITH_CLIENT)),
