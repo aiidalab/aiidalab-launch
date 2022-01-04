@@ -180,8 +180,12 @@ class AiidaLabInstance:
 
     def exec_create(self, cmd, privileged=False):
         LOGGER.info(f"Executing: {' '.join(cmd)}")
+        container = self.container()
+        if container is None:
+            raise RuntimeError("Instance was not created.")
+
         return self.client.api.exec_create(
-            self.container().id,
+            container.id,
             cmd,
             user=None if privileged else self.profile.system_user,
             workdir=None if privileged else f"/home/{self.profile.system_user}",
