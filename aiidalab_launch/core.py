@@ -86,7 +86,7 @@ class Config:
         return cls.loads(path.read_text())
 
     def save(self, path, safe=True):
-        path.parent.mkdir(exist_ok=True)
+        path.parent.mkdir(exist_ok=True, parents=True)
         if safe:
             path_tmp = path.with_suffix(f".{uuid4()!s}")
             path_tmp.write_text(self.dumps())
