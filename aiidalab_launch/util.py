@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 from contextlib import contextmanager
 from textwrap import wrap
-from threading import Event, Thread
+from threading import Event, Thread, Timer
 
 import click
 import click_spinner
@@ -22,20 +22,27 @@ def spinner(msg=None, final=None, delay=0):
     """Display spinner only after an optional initial delay."""
 
     def spin():
-        if not stop.wait(delay):
-            if msg:
-                click.echo(f"{msg.rstrip()} ", nl=False, err=True)
-            with click_spinner.spinner():
-                stop.wait()  # wait until stopped
-            if msg:
-                click.echo(final or "done.", err=True)
+        if msg:
+            click.echo(f"{msg.rstrip()} ", nl=False, err=True)
+        with click_spinner.spinner():
+            stop.wait()
+        if completed.is_set() and msg:
+            click.echo(final or "done.", err=True)
 
     stop = Event()
-    thread = Thread(target=spin)
-    thread.start()
-    yield
-    stop.set()
-    thread.join()
+    completed = Event()
+    timed_spinner = Timer(delay, spin)
+    timed_spinner.start()
+    try:
+        yield
+        # Try to cancel the timer if still possible.
+        timed_spinner.cancel()
+        # Set the completed event since there was no exception, indicating that
+        # the waited on operation completed successfully.
+        completed.set()
+    finally:
+        stop.set()
+        timed_spinner.join()
 
 
 def get_docker_client(*args, **kwargs):
