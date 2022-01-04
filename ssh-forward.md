@@ -15,7 +15,7 @@ This can be easily achieved by creating an SSH tunnel and forwarding the AiiDAla
     ````
     - The `--no-browser` option tells the launcher that we do not want to directly open AiiDAlab after starting the instance.
     - The `--show-ssh-port-forwarding-help` option instructs the launcher to provide some help on the command neded for SSH port forwarding.
-    
+
     _Usually the launcher will be able to detect that you are starting AiiDAlab on a headless remote machine in which case aforementioned options are automatically selected._
 
 3. Wait for AiiDAlab to start and note down the provided ssh command and URL.
