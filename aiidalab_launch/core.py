@@ -144,7 +144,7 @@ class AiidaLabInstance:
         if self.profile.home_mount:
             LOGGER.info(f"Ensure home mount point ({self.profile.home_mount}) exists.")
             Path(self.profile.home_mount).mkdir(exist_ok=True)
-        LOGGER.info(f"Starting container '{self.profile.container_name}'...")
+        LOGGER.info(f"Starting container '{self.profile.container_name()}'...")
 
         container = self.client.containers.run(
             image=self.profile.image,
