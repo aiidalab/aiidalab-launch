@@ -208,20 +208,22 @@ def set_default_profile(app_state, profile):
         click.echo(f"Set default profile to '{profile}'.")
 
 
-def _find_mount_point_conflict(client, home_mount, profiles):
+def _find_mount_point_conflict(client, profile, other_profiles):
     """Find running instances with the same home mount point.
 
     To protect users from inadvertently starting a second profile with the same
     home mount point. Running two containers with the same home mount point has
     potential for data corruption.
     """
-    for profile in profiles:
+    for other_profile in other_profiles:
         if (
-            profile.home_mount == home_mount
-            and AiidaLabInstance(client=client, profile=profile).status()
+            other_profile != profile
+            and Path(other_profile.home_mount).resolve()
+            == Path(profile.home_mount).resolve()
+            and AiidaLabInstance(client=client, profile=other_profile).status()
             is not AiidaLabInstance.AiidaLabInstanceStatus.DOWN
         ):
-            yield profile
+            yield other_profile
 
 
 @cli.command()
@@ -269,7 +271,7 @@ def start(app_state, profile, restart, wait, pull, no_browser, force):
             conflict = any(
                 _find_mount_point_conflict(
                     app_state.docker_client,
-                    profile.home_mount,
+                    profile,
                     app_state.config.profiles,
                 )
             )
