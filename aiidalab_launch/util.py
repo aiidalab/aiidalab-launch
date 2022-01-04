@@ -59,16 +59,6 @@ def get_docker_client(*args, **kwargs):
         raise click.ClickException(f"Failed to communicate with Docker client: {error}")
 
 
-def get_container(client, container_name):  # obsolete?
-    try:
-        return client.containers.get(container_name)
-    except docker.errors.NotFound:
-        raise click.ClickException(
-            "Unable to communicate with the AiiDAlab container with name "
-            f"'{container_name}'. Is it running? Use `start` to start it."
-        )
-
-
 class Timeout(Exception):
     pass
 
