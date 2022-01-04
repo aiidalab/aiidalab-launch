@@ -7,6 +7,7 @@ Authors:
 import logging
 from dataclasses import dataclass, field
 from pathlib import Path
+from textwrap import wrap
 
 import click
 import docker
@@ -21,6 +22,12 @@ MSG_STARTUP = """Open the following URL to access AiiDAlab:
   {url}
 
 Home mounted: {home_mount} -> /home/{system_user}"""
+
+
+MSG_MOUNT_POINT_CONFLICT = """Warning: There is at least one other running
+instance that has the same home mount point ('{home_mount}') as the instance
+you are currently trying to start. Are you sure you want to continue? This may
+lead to data corruption."""
 
 
 LOGGING_LEVELS = {
@@ -201,6 +208,22 @@ def set_default_profile(app_state, profile):
         click.echo(f"Set default profile to '{profile}'.")
 
 
+def _find_mount_point_conflict(client, home_mount, profiles):
+    """Find running instances with the same home mount point.
+
+    To protect users from inadvertently starting a second profile with the same
+    home mount point. Running two containers with the same home mount point has
+    potential for data corruption.
+    """
+    for profile in profiles:
+        if (
+            profile.home_mount == home_mount
+            and AiidaLabInstance(client=client, profile=profile).status()
+            is not AiidaLabInstance.AiidaLabInstanceStatus.DOWN
+        ):
+            yield profile
+
+
 @cli.command()
 @click.option(
     "--restart",
@@ -230,12 +253,33 @@ def set_default_profile(app_state, profile):
         "(This is disabled by default if the wait time is set to zero.)"
     ),
 )
+@click.option(
+    "-f", "--force", is_flag=True, help="Ignore any warnings and start anyways."
+)
 @pass_app_state
 @with_profile
-def start(app_state, profile, restart, wait, pull, no_browser):
+def start(app_state, profile, restart, wait, pull, no_browser, force):
     """Start an AiiDAlab instance on this host."""
 
     instance = AiidaLabInstance(client=app_state.docker_client, profile=profile)
+
+    # Check for potential mount point conflicts.
+    if not force:
+        with spinner("Check for potential conflicts...", delay=0.1):
+            conflict = any(
+                _find_mount_point_conflict(
+                    app_state.docker_client,
+                    profile.home_mount,
+                    app_state.config.profiles,
+                )
+            )
+        if conflict:
+            msg_warn = MSG_MOUNT_POINT_CONFLICT.format(home_mount=profile.home_mount)
+            click.confirm(
+                click.style("\n".join(wrap(msg_warn)), fg="yellow"),
+                abort=True,
+            )
+
     try:
         if instance.container() is None:
             if pull:
