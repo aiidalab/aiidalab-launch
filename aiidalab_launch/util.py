@@ -26,8 +26,9 @@ def spinner(msg=None, final=None, delay=0):
             click.echo(f"{msg.rstrip()} ", nl=False, err=True)
         with click_spinner.spinner():
             stop.wait()
-        if completed.is_set() and msg:
-            click.echo(final or "done.", err=True)
+        click.echo(
+            (final or "done.") if (completed.is_set() and msg) else " ", err=True
+        )
 
     stop = Event()
     completed = Event()
