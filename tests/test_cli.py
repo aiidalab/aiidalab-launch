@@ -50,3 +50,19 @@ def test_show_profile():
     runner: CliRunner = CliRunner()
     result: Result = runner.invoke(cli.cli, ["profiles", "show", "default"])
     assert Profile.loads("default", result.output) == Profile()
+
+
+def test_add_remove_profile():
+    runner: CliRunner = CliRunner()
+    result: Result = runner.invoke(cli.cli, ["profiles", "add", "new_profile"])
+    assert "Added profile 'new_profile'." in result.output
+    result: Result = runner.invoke(cli.cli, ["profiles", "list"])
+    assert "new_profile" in result.output
+    result: Result = runner.invoke(cli.cli, ["profiles", "show", "new_profile"])
+    assert result.exit_code == 0
+    result: Result = runner.invoke(
+        cli.cli, ["profiles", "remove", "new_profile"], input="y\n"
+    )
+    assert result.exit_code == 0
+    result: Result = runner.invoke(cli.cli, ["profiles", "list"])
+    assert "new_profile" not in result.output
