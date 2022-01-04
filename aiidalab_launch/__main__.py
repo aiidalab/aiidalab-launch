@@ -276,11 +276,17 @@ def _find_mount_point_conflict(client, profile, other_profiles):
     ),
 )
 @click.option(
+    "--show-ssh-port-forwarding-help",
+    "show_ssh_help",
+    is_flag=True,
+    help="Show guidance on SSH port forwarding.",
+)
+@click.option(
     "-f", "--force", is_flag=True, help="Ignore any warnings and start anyways."
 )
 @pass_app_state
 @with_profile
-def start(app_state, profile, restart, wait, pull, no_browser, force):
+def start(app_state, profile, restart, wait, pull, no_browser, show_ssh_help, force):
     """Start an AiiDAlab instance on this host."""
 
     instance = AiidaLabInstance(client=app_state.docker_client, profile=profile)
@@ -357,7 +363,11 @@ def start(app_state, profile, restart, wait, pull, no_browser, force):
             with spinner("Waiting for AiiDAlab services to start..."):
                 instance.wait_for_services(timeout=wait)
             url = instance.url()
-            msg_startup = MSG_STARTUP if webbrowser_available() else MSG_STARTUP_SSH
+            msg_startup = (
+                MSG_STARTUP_SSH
+                if (show_ssh_help or not webbrowser_available())
+                else MSG_STARTUP
+            )
             click.secho(
                 msg_startup.format(
                     url=instance.url(),
