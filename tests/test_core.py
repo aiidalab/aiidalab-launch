@@ -68,12 +68,23 @@ def test_instance_init(instance):
     assert instance.status() is instance.AiidaLabInstanceStatus.DOWN
 
 
+@pytest.mark.trylast
+def test_instance_create_remove(instance):
+    instance.create()
+    # The instance is automatically stopped and removed by the fixture
+    # function.
+
+
 @pytest.mark.slow
 @pytest.mark.trylast
 def test_instance_start_stop(instance):
     instance.start()
     sleep(0.1)
     assert instance.status() is instance.AiidaLabInstanceStatus.STARTING
+
+    # premature additional start should have no negative effect
+    instance.start()
+
     instance.wait_for_services(timeout=300)
     assert instance.status() is instance.AiidaLabInstanceStatus.UP
     instance.stop()
