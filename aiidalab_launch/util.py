@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
+import asyncio
 import webbrowser
 from contextlib import contextmanager
 from textwrap import wrap
@@ -60,30 +61,6 @@ def get_docker_client(*args, **kwargs):
         raise click.ClickException(f"Failed to communicate with Docker client: {error}")
 
 
-class Timeout(Exception):
-    pass
-
-
-class FailedtoWaitForServices(RuntimeError):
-    pass
-
-
-def wait_for_services(container, timeout=None):
-    error = False
-
-    def _internal():
-        nonlocal error
-        error = container.exec_run("wait-for-services").exit_code != 0
-
-    thread = Thread(target=_internal, daemon=True)
-    thread.start()
-    thread.join(timeout=timeout)
-    if error:
-        raise FailedtoWaitForServices
-    elif thread.is_alive():
-        raise Timeout
-
-
 def webbrowser_available():
     """Check whether a webbrowser is available.
 
@@ -97,3 +74,37 @@ def webbrowser_available():
         return False
     else:
         return True
+
+
+# Adapted from: https://stackoverflow.com/a/62297994
+def _async_wrap_iter(it):
+    """Wrap blocking iterator into an asynchronous one"""
+    loop = asyncio.get_event_loop()
+    q = asyncio.Queue(1)
+    exception = None
+    _END = object()
+
+    async def yield_queue_items():
+        while True:
+            next_item = await q.get()
+            if next_item is _END:
+                break
+            yield next_item
+        if exception is not None:
+            # the iterator has raised, propagate the exception
+            raise exception
+
+    def iter_to_queue():
+        nonlocal exception
+        try:
+            for item in it:
+                # This runs outside the event loop thread, so we
+                # must use thread-safe API to talk to the queue.
+                asyncio.run_coroutine_threadsafe(q.put(item), loop).result()
+        except Exception as e:
+            exception = e
+        finally:
+            asyncio.run_coroutine_threadsafe(q.put(_END), loop).result()
+
+    Thread(target=iter_to_queue).start()
+    return yield_queue_items()
