@@ -496,7 +496,7 @@ def exec(ctx, profile, cmd, privileged, forward_exit_code, wait):
 
     For example, to get a list of all installed aiidalab applications, run:
 
-        aiidalab-launch exec aiidalab list
+        aiidalab-launch exec -- aiidalab list
 
     """
     app_state = ctx.ensure_object(ApplicationState)
