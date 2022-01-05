@@ -64,6 +64,10 @@ class Timeout(Exception):
     pass
 
 
+class FailedtoWaitForServices(RuntimeError):
+    pass
+
+
 def wait_for_services(container, timeout=None):
     error = False
 
@@ -75,9 +79,7 @@ def wait_for_services(container, timeout=None):
     thread.start()
     thread.join(timeout=timeout)
     if error:
-        raise RuntimeError(
-            "Failed to wait-for-services, is this a valid AiiDAlab instance?"
-        )
+        raise FailedtoWaitForServices
     elif thread.is_alive():
         raise Timeout
 

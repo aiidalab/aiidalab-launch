@@ -360,8 +360,15 @@ def start(app_state, profile, restart, wait, pull, no_browser, show_ssh_help, fo
         raise click.ClickException(f"Unknown error occurred: {error}")
     else:
         if wait:
-            with spinner("Waiting for AiiDAlab services to start..."):
-                instance.wait_for_services(timeout=wait)
+            try:
+                with spinner("Waiting for AiiDAlab services to start..."):
+                    instance.wait_for_services(timeout=wait)
+            except RuntimeError:
+                raise click.ClickException(
+                    "Failed to wait-for-services. This may mean that AiiDAlab "
+                    "failed to start or that the selected image is not "
+                    "actually a AiiDAlab instance."
+                )
             url = instance.url()
             msg_startup = (
                 MSG_STARTUP_SSH
