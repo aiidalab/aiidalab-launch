@@ -1,7 +1,9 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
+import asyncio
 import logging
 import time
+from contextlib import contextmanager
 from dataclasses import asdict, dataclass, field
 from enum import Enum, auto
 from pathlib import Path
@@ -12,7 +14,7 @@ from uuid import uuid4
 import docker
 import toml
 
-from .util import Timeout, wait_for_services
+from .util import _async_wrap_iter
 
 MAIN_PROFILE_NAME = "default"
 
@@ -99,6 +101,19 @@ class Config:
             if profile.name == name:
                 return profile
         raise ValueError(f"Did not find profile with name '{name}'.")
+
+
+class FailedToWaitForServices(RuntimeError):
+    pass
+
+
+@contextmanager
+def _async_logs(container):
+    logs = container.logs(stream=True, follow=False)
+    try:
+        yield _async_wrap_iter(logs)
+    finally:
+        logs.close()
 
 
 @dataclass
@@ -191,28 +206,57 @@ class AiidaLabInstance:
             workdir=None if privileged else f"/home/{self.profile.system_user}",
         )["Id"]
 
-    def wait_for_services(self, timeout=None):
+    async def _wait_for_services(self):
         container = self.container()
         if container is None:
             raise RuntimeError("Instance was not created.")
 
+        loop = asyncio.get_event_loop()
         LOGGER.info(f"Waiting for services to come up ({container.id})...")
+
+        wait_for_services = loop.run_in_executor(
+            None, container.exec_run, "wait-for-services"
+        )
+
+        async def _echo_logs():
+            with _async_logs(container) as logs:
+                async for chunk in logs:
+                    if logging.DEBUG < LOGGER.getEffectiveLevel() < logging.ERROR:
+                        # For 'intermediate' verbosity, echo directly to STDOUT.
+                        print(chunk.decode("utf-8").strip())
+                    else:
+                        # Otherwise, echo to the debug log.
+                        LOGGER.debug(f"{container.id}: {chunk.decode('utf-8').strip()}")
+
+        echo_logs = asyncio.create_task(_echo_logs())  # start logging
+        result = await wait_for_services
+        echo_logs.cancel()
+
+        if result.exit_code != 0:
+            LOGGER.info(f"Failed to wait for services ({container.id}).")
+            raise FailedToWaitForServices
+        else:
+            LOGGER.info(f"Services are up ({container.id}).")
+
+    def wait_for_services(self, timeout=None):
         start = time.time()
-        wait_for_services(container, timeout=timeout)
+        try:
+            asyncio.run(asyncio.wait_for(self._wait_for_services(), timeout))
+        except asyncio.TimeoutError:
+            raise TimeoutError
         stop = time.time()
         if stop - start > 2:
             # It is likely that the server *just* started up, wait a few more
             # seconds, otherwise trying to access the instance right away  will
             # likely fail.
             time.sleep(5)
-        LOGGER.info(f"Services are up ({container.id}).")
 
     def status(self, timeout=3) -> AiidaLabInstanceStatus:
         container = self.container()
         if container and container.status == "running":
             try:
                 self.wait_for_services(timeout=timeout)
-            except Timeout:
+            except TimeoutError:
                 return self.AiidaLabInstanceStatus.STARTING
             except RuntimeError:
                 return self.AiidaLabInstanceStatus.UNKNOWN
