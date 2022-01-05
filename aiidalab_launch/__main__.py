@@ -477,9 +477,15 @@ def status(app_state):
 @click.argument("cmd", nargs=-1)
 @click.option("-p", "--privileged", is_flag=True)
 @click.option("--forward-exit-code", is_flag=True)
+@click.option(
+    "--wait/--no-wait",
+    help="Wait on AiiDAlab services to get ready before sending the command.",
+    show_default=True,
+    default=True,
+)
 @click.pass_context
 @with_profile
-def exec(ctx, profile, cmd, privileged, forward_exit_code):
+def exec(ctx, profile, cmd, privileged, forward_exit_code, wait):
     """Directly execute a command on a AiiDAlab instance.
 
     For example, to get a list of all installed aiidalab applications, run:
@@ -490,6 +496,8 @@ def exec(ctx, profile, cmd, privileged, forward_exit_code):
     app_state = ctx.ensure_object(ApplicationState)
     instance = AiidaLabInstance(client=app_state.docker_client, profile=profile)
     try:
+        with spinner("Waiting for AiiDAlab to get ready...", delay=0.5):
+            instance.wait_for_services(timeout=wait)
         with spinner("Send command to container...", delay=1.0):
             exec_id = instance.exec_create(" ".join(cmd), privileged=privileged)
     except RuntimeError:
