@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-"""Convenience script wrapper to start and stop AiiDAlab via docker-compose.
+"""Tool to launch and manage AiiDAlab instances with docker.
 
 Authors:
     * Carl Simon Adorf <simon.adorf@epfl.ch>
