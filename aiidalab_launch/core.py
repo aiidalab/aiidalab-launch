@@ -274,17 +274,19 @@ class AiidaLabInstance:
 
     def status(self, timeout=3) -> AiidaLabInstanceStatus:
         container = self.container
-        if container and container.status == "running":
-            try:
-                self.wait_for_services(timeout=timeout)
-            except TimeoutError:
-                return self.AiidaLabInstanceStatus.STARTING
-            except RuntimeError:
-                return self.AiidaLabInstanceStatus.UNKNOWN
-            else:
-                return self.AiidaLabInstanceStatus.UP
-        elif container and container.status == "created":
-            return self.AiidaLabInstanceStatus.CREATED
+        if container:
+            container.reload()
+            if container.status == "running":
+                try:
+                    self.wait_for_services(timeout=timeout)
+                except TimeoutError:
+                    return self.AiidaLabInstanceStatus.STARTING
+                except RuntimeError:
+                    return self.AiidaLabInstanceStatus.UNKNOWN
+                else:
+                    return self.AiidaLabInstanceStatus.UP
+            elif container.status == "created":
+                return self.AiidaLabInstanceStatus.CREATED
         return self.AiidaLabInstanceStatus.DOWN
 
     def jupyter_token(self) -> Optional[str]:
