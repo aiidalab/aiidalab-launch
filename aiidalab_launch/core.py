@@ -123,6 +123,7 @@ class AiidaLabInstance:
         CREATED = auto()
         DOWN = auto()
         UP = auto()
+        EXITED = auto()
         STARTING = auto()
 
     client: docker.DockerClient
@@ -282,6 +283,8 @@ class AiidaLabInstance:
                     return self.AiidaLabInstanceStatus.UP
             elif self.container.status == "created":
                 return self.AiidaLabInstanceStatus.CREATED
+            elif self.container and self.container.status == "exited":
+                return self.AiidaLabInstanceStatus.EXITED
         return self.AiidaLabInstanceStatus.DOWN
 
     def jupyter_token(self) -> Optional[str]:
