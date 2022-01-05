@@ -100,16 +100,15 @@ def with_profile(cmd):
 )
 def cli(verbose):
     # Use the verbosity count to determine the logging level...
+    logging.basicConfig(
+        level=LOGGING_LEVELS[verbose] if verbose in LOGGING_LEVELS else logging.DEBUG
+    )
     if verbose > 0:
-        logging.basicConfig(
-            level=LOGGING_LEVELS[verbose]
-            if verbose in LOGGING_LEVELS
-            else logging.DEBUG
-        )
         click.secho(
             f"Verbose logging is enabled. "
             f"(LEVEL={logging.getLogger().getEffectiveLevel()})",
             fg="yellow",
+            err=True,
         )
 
     LOGGER.info(f"Configuration file path: {_application_config_path()}")
