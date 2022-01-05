@@ -5,6 +5,7 @@
 .. currentmodule:: test_core
 .. moduleauthor:: Carl Simon Adorf <simon.adorf@epfl.ch>
 """
+import sys
 from dataclasses import replace
 from time import sleep
 
@@ -33,6 +34,8 @@ def instance(docker_client, profile):
         instance.remove()
     except (RuntimeError, docker.errors.NotFound):
         pass
+    except docker.errors.APIError as error:
+        print(f"WARNING: Issue while removing instance: {error}", file=sys.stderr)
 
 
 def test_profile_init(profile):
