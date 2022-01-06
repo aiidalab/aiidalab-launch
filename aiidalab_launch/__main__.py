@@ -308,7 +308,7 @@ def start(app_state, profile, restart, wait, pull, no_browser, show_ssh_help, fo
             )
 
     try:
-        if instance.container() is None:
+        if instance.container is None:
             if pull:
                 with spinner(
                     f"Downloading image '{instance.profile.image}' (this may take a while)..."

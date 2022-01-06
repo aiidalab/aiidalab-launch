@@ -127,12 +127,20 @@ class AiidaLabInstance:
 
     client: docker.DockerClient
     profile: Profile
+    _container: docker.models.containers.Container = None
 
-    def container(self):
+    def _get_container(self):
         try:
             return self.client.containers.get(self.profile.container_name())
         except docker.errors.NotFound:
             return None
+
+    def __post_init__(self):
+        self._container = self._get_container()
+
+    @property
+    def container(self) -> Optional[docker.models.containers.Container]:
+        return self._container
 
     @property
     def _mounts(self):
@@ -156,7 +164,7 @@ class AiidaLabInstance:
         except docker.errors.ImageNotFound:
             raise RuntimeError(f"Unable to pull image: {self.profile.image}")
 
-    def create(self):
+    def create(self) -> docker.models.containers.Container:
         if self.profile.home_mount:
             LOGGER.info(f"Ensure home mount point ({self.profile.home_mount}) exists.")
             Path(self.profile.home_mount).mkdir(exist_ok=True)
@@ -166,86 +174,86 @@ class AiidaLabInstance:
         except docker.errors.ImageNotFound:
             image = self.pull()
 
-        return self.client.containers.create(
+        assert self._container is None
+        self._container = self.client.containers.create(
             image=image,
             name=self.profile.container_name(),
             environment=self.profile.environment(jupyter_token=token_hex(32)),
             mounts=self._mounts,
             ports={"8888/tcp": self.profile.port},
         )
+        return self._container
 
     def start(self):
         LOGGER.info(f"Starting container '{self.profile.container_name()}'...")
-
-        container = self.container() or self.create()
-        container.start()
-        LOGGER.info(f"Started container: {container.name} ({container.id}).")
+        (self.container or self.create()).start()
+        LOGGER.info(f"Started container: {self.container.name} ({self.container.id}).")
 
     def restart(self, timeout=None):
-        self.container().restart()
+        self.container.restart()
 
     def stop(self, timeout=None):
         try:
-            self.container().stop(timeout=timeout)
+            self.container.stop(timeout=timeout)
         except AttributeError:
             raise RuntimeError("no container")
 
     def remove(self):
         try:
-            self.container().remove()
+            self.container.remove()
+            self._container = None
         except AttributeError:
             raise RuntimeError("no container")
 
     def logs(self, stream=False, follow=False):
-        container = self.container()
-        if container is None:
+        if self.container is None:
             raise RuntimeError("Instance was not created.")
-        return container.logs(stream=stream, follow=follow)
+        return self.container.logs(stream=stream, follow=follow)
 
     def exec_create(self, cmd, privileged=False):
         LOGGER.info(f"Executing: {' '.join(cmd)}")
-        container = self.container()
-        if container is None:
+        if self.container is None:
             raise RuntimeError("Instance was not created.")
 
         return self.client.api.exec_create(
-            container.id,
+            self.container.id,
             cmd,
             user=None if privileged else self.profile.system_user,
             workdir=None if privileged else f"/home/{self.profile.system_user}",
         )["Id"]
 
     async def _wait_for_services(self):
-        container = self.container()
-        if container is None:
+        if self.container is None:
             raise RuntimeError("Instance was not created.")
 
         loop = asyncio.get_event_loop()
-        LOGGER.info(f"Waiting for services to come up ({container.id})...")
+        LOGGER.info(f"Waiting for services to come up ({self.container.id})...")
 
         wait_for_services = loop.run_in_executor(
-            None, container.exec_run, "wait-for-services"
+            None, self.container.exec_run, "wait-for-services"
         )
 
         async def _echo_logs():
-            with _async_logs(container) as logs:
+            with _async_logs(self.container) as logs:
                 async for chunk in logs:
                     if logging.DEBUG < LOGGER.getEffectiveLevel() < logging.ERROR:
                         # For 'intermediate' verbosity, echo directly to STDOUT.
                         print(chunk.decode("utf-8").strip())
                     else:
                         # Otherwise, echo to the debug log.
-                        LOGGER.debug(f"{container.id}: {chunk.decode('utf-8').strip()}")
+                        LOGGER.debug(
+                            f"{self.container.id}: {chunk.decode('utf-8').strip()}"
+                        )
 
         echo_logs = asyncio.create_task(_echo_logs())  # start logging
         result = await wait_for_services
         echo_logs.cancel()
 
         if result.exit_code != 0:
-            LOGGER.info(f"Failed to wait for services ({container.id}).")
+            LOGGER.info(f"Failed to wait for services ({self.container.id}).")
             raise FailedToWaitForServices
         else:
-            LOGGER.info(f"Services are up ({container.id}).")
+            LOGGER.info(f"Services are up ({self.container.id}).")
 
     def wait_for_services(self, timeout=None):
         start = time.time()
@@ -261,34 +269,33 @@ class AiidaLabInstance:
             time.sleep(5)
 
     def status(self, timeout=3) -> AiidaLabInstanceStatus:
-        container = self.container()
-        if container and container.status == "running":
-            try:
-                self.wait_for_services(timeout=timeout)
-            except TimeoutError:
-                return self.AiidaLabInstanceStatus.STARTING
-            except RuntimeError:
-                return self.AiidaLabInstanceStatus.UNKNOWN
-            else:
-                return self.AiidaLabInstanceStatus.UP
-        elif container and container.status == "created":
-            return self.AiidaLabInstanceStatus.CREATED
+        if self.container:
+            self.container.reload()
+            if self.container.status == "running":
+                try:
+                    self.wait_for_services(timeout=timeout)
+                except TimeoutError:
+                    return self.AiidaLabInstanceStatus.STARTING
+                except RuntimeError:
+                    return self.AiidaLabInstanceStatus.UNKNOWN
+                else:
+                    return self.AiidaLabInstanceStatus.UP
+            elif self.container.status == "created":
+                return self.AiidaLabInstanceStatus.CREATED
         return self.AiidaLabInstanceStatus.DOWN
 
     def jupyter_token(self) -> Optional[str]:
-        container = self.container()
-        if container:
-            result = container.exec_run("/bin/sh -c 'echo $JUPYTER_TOKEN'")
+        if self.container:
+            result = self.container.exec_run("/bin/sh -c 'echo $JUPYTER_TOKEN'")
             if result.exit_code == 0:
                 return result.output.decode().strip()
             else:
                 return None
 
     def host_port(self) -> Optional[int]:
-        container = self.container()
-        if container:
+        if self.container:
             try:
-                return container.ports["8888/tcp"][0]["HostPort"]
+                return self.container.ports["8888/tcp"][0]["HostPort"]
             except (KeyError, IndexError):
                 return None
 
