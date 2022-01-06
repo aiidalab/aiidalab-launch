@@ -171,7 +171,6 @@ class AiidaLabInstance:
             environment=self.profile.environment(jupyter_token=token_hex(32)),
             mounts=self._mounts,
             ports={"8888/tcp": self.profile.port},
-            detach=True,
         )
 
     def start(self):
