@@ -309,21 +309,22 @@ def start(app_state, profile, restart, wait, pull, no_browser, show_ssh_help, fo
 
     # Obtain image (either via pull or local).
     if pull:
-        with spinner(
-            f"Downloading image '{instance.profile.image}' (this may take a while)..."
-        ):
-            image = instance.pull()
-    else:
         try:
-            image = app_state.docker_client.images.get(profile.image)
-        except docker.errors.ImageNotFound:
-            raise click.ClickException(
-                f"Unable to find image '{profile.image}'. "
-                "Try to use '--pull' to pull the image prior to start."
-            )
+            with spinner(
+                f"Downloading image '{instance.profile.image}' (this may take a while)..."
+            ):
+                instance.pull()
+        except RuntimeError as error:
+            raise click.ClickException(str(error))
+    elif instance.image is None:
+        raise click.ClickException(
+            f"Unable to find image '{profile.image}'. "
+            "Try to use '--pull' to pull the image prior to start."
+        )
 
     # Check if image has changed.
-    recreate = instance.container and instance.container.image.id != image.id
+    assert instance.image is not None
+    recreate = instance.container and instance.container.image.id != instance.image.id
 
     try:
 
