@@ -323,10 +323,7 @@ def start(app_state, profile, restart, wait, pull, no_browser, show_ssh_help, fo
             )
 
     # Check if image has changed.
-    if instance.container and instance.container.image.id != image.id:
-        recreate = True
-    else:
-        recreate = False
+    recreate = instance.container and instance.container.image.id != image.id
 
     try:
 
