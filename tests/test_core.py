@@ -80,6 +80,7 @@ def test_instance_create_remove(instance):
 @pytest.mark.slow
 @pytest.mark.trylast
 def test_instance_start_stop(instance):
+    assert instance.status() is instance.AiidaLabInstanceStatus.DOWN
     instance.start()
     sleep(0.1)
     assert instance.status() is instance.AiidaLabInstanceStatus.STARTING
@@ -90,4 +91,6 @@ def test_instance_start_stop(instance):
     instance.wait_for_services(timeout=300)
     assert instance.status() is instance.AiidaLabInstanceStatus.UP
     instance.stop()
+    assert instance.status() is instance.AiidaLabInstanceStatus.EXITED
+    instance.remove()
     assert instance.status() is instance.AiidaLabInstanceStatus.DOWN

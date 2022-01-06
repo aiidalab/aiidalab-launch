@@ -307,35 +307,62 @@ def start(app_state, profile, restart, wait, pull, no_browser, show_ssh_help, fo
                 abort=True,
             )
 
+    # Obtain image (either via pull or local).
+    if pull:
+        try:
+            msg = (
+                f"Downloading image '{instance.profile.image}', this may take a while..."
+                if instance.image is None
+                else f"Downloading latest version of '{instance.profile.image}'..."
+            )
+            with spinner(msg):
+                instance.pull()
+        except RuntimeError as error:
+            raise click.ClickException(str(error))
+    elif instance.image is None:
+        raise click.ClickException(
+            f"Unable to find image '{profile.image}'. "
+            "Try to use '--pull' to pull the image prior to start."
+        )
+
+    # Check if image has changed.
+    assert instance.image is not None
+    recreate = instance.container and instance.container.image.id != instance.image.id
+
     try:
-        if instance.container is None:
-            if pull:
-                with spinner(
-                    f"Downloading image '{instance.profile.image}' (this may take a while)..."
-                ):
-                    instance.pull()
-            else:
-                raise click.ClickException(
-                    f"Unable to find container '{instance.profile.container_name()}'. "
-                    "Use '--pull' to pull the image prior to start."
-                )
 
         InstanceStatus = instance.AiidaLabInstanceStatus  # local alias for brevity
 
         status = instance.status()
-        if status is InstanceStatus.DOWN:
+        if status in (
+            InstanceStatus.DOWN,
+            InstanceStatus.CREATED,
+            InstanceStatus.EXITED,
+        ):
+            if recreate:
+                with spinner("Recreating container..."):
+                    instance.remove()
+                    instance.create()
             with spinner("Starting container..."):
                 instance.start()
-        elif status is InstanceStatus.CREATED:
-            with spinner("Starting previously created container..."):
-                instance.restart()
         elif status is InstanceStatus.UP and restart:
             with spinner("Restarting container..."):
-                instance.restart()
+                if recreate:
+                    instance.stop()
+                    instance.remove()
+                instance.start()
         elif status is InstanceStatus.UP and not restart:
-            click.echo(
-                "Container was already running, use --restart to restart it.", err=True
-            )
+            if recreate:
+                click.secho(
+                    "Container is already running, however the image has changed. "
+                    "A restart with --restart is recommended.",
+                    fg="yellow",
+                )
+            else:
+                click.echo(
+                    "Container was already running, use --restart to restart it.",
+                    err=True,
+                )
         elif status is InstanceStatus.STARTING:
             click.echo("Container is already starting up...", err=True)
 
