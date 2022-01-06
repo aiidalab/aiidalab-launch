@@ -310,9 +310,12 @@ def start(app_state, profile, restart, wait, pull, no_browser, show_ssh_help, fo
     # Obtain image (either via pull or local).
     if pull:
         try:
-            with spinner(
-                f"Downloading image '{instance.profile.image}' (this may take a while)..."
-            ):
+            msg = (
+                f"Downloading image '{instance.profile.image}', this may take a while..."
+                if instance.image is None
+                else f"Downloading latest version of '{instance.profile.image}'..."
+            )
+            with spinner(msg):
                 instance.pull()
         except RuntimeError as error:
             raise click.ClickException(str(error))
