@@ -12,7 +12,7 @@ from dataclasses import asdict, dataclass, field
 from enum import Enum, auto
 from pathlib import Path
 from secrets import token_hex
-from typing import Any, AsyncGenerator, Generator, List, Optional
+from typing import Any, AsyncGenerator, Generator, List, Optional, Union
 from uuid import uuid4
 
 import docker
@@ -233,7 +233,7 @@ class AiidaLabInstance:
 
     def logs(
         self, stream: bool = False, follow: bool = False
-    ) -> docker.types.daemon.CancellableStream:
+    ) -> Union[docker.types.daemon.CancellableStream, str]:
         if self.container is None:
             raise RuntimeError("Instance was not created.")
         return self.container.logs(stream=stream, follow=follow)
