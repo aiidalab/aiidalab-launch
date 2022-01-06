@@ -32,7 +32,7 @@ def instance(docker_client, profile):
     try:
         instance.stop()
         instance.remove()
-    except (RuntimeError, docker.errors.NotFound):
+    except (RuntimeError, docker.errors.NotFound, AssertionError):
         pass
     except docker.errors.APIError as error:
         print(f"WARNING: Issue while removing instance: {error}", file=sys.stderr)
