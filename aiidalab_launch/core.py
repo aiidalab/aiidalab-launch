@@ -189,7 +189,7 @@ class AiidaLabInstance:
         (self.container or self.create()).start()
         LOGGER.info(f"Started container: {self.container.name} ({self.container.id}).")
 
-    def restart(self, timeout=None):
+    def restart(self):
         self.container.restart()
 
     def stop(self, timeout=None):
