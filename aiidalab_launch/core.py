@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
+# __future__ import needed for classmethod factory functions; should be dropped
+# with py 3.10.
 from __future__ import annotations
 
 import asyncio
