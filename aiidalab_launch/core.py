@@ -159,6 +159,10 @@ class AiidaLabInstance:
     def container(self) -> Optional[docker.models.containers.Container]:
         return self._container
 
+    def _requires_container(self) -> None:
+        if self.container is None:
+            raise RuntimeError("This function requires a container instance.")
+
     @property
     def _mounts(self) -> List[docker.types.Mount]:
         return (
@@ -204,10 +208,12 @@ class AiidaLabInstance:
         LOGGER.info(f"Started container: {self.container.name} ({self.container.id}).")
 
     def restart(self) -> None:
+        self._requires_container()
         assert self.container is not None
         self.container.restart()
 
     def stop(self, timeout: Optional[float] = None) -> None:
+        self._requires_container()
         assert self.container is not None
         try:
             self.container.stop(timeout=timeout)
@@ -215,6 +221,7 @@ class AiidaLabInstance:
             raise RuntimeError("no container")
 
     def remove(self) -> None:
+        self._requires_container()
         assert self.container is not None
         try:
             self.container.remove()
