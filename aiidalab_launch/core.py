@@ -243,12 +243,17 @@ class AiidaLabInstance:
         if self.container is None:
             raise RuntimeError("Instance was not created.")
 
-        return self.client.api.exec_create(
-            self.container.id,
-            cmd,
-            user=None if privileged else self.profile.system_user,
-            workdir=None if privileged else f"/home/{self.profile.system_user}",
-        )["Id"]
+        try:
+            return self.client.api.exec_create(
+                self.container.id,
+                cmd,
+                user=None if privileged else self.profile.system_user,
+                workdir=None if privileged else f"/home/{self.profile.system_user}",
+            )["Id"]
+        except docker.errors.APIError:
+            raise RuntimeError(
+                f"Unable to send command to container '{self.container.id}'."
+            )
 
     async def _wait_for_services(self) -> None:
         if self.container is None:

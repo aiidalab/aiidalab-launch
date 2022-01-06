@@ -529,8 +529,9 @@ def exec(ctx, profile, cmd, privileged, forward_exit_code, wait):
     app_state = ctx.ensure_object(ApplicationState)
     instance = AiidaLabInstance(client=app_state.docker_client, profile=profile)
     try:
-        with spinner("Waiting for AiiDAlab to get ready...", delay=0.5):
-            instance.wait_for_services(timeout=wait)
+        if wait:
+            with spinner("Waiting for AiiDAlab to get ready...", delay=0.5):
+                instance.wait_for_services(timeout=60)
         with spinner("Send command to container...", delay=1.0):
             exec_id = instance.exec_create(" ".join(cmd), privileged=privileged)
     except RuntimeError:
