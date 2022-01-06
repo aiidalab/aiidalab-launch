@@ -27,7 +27,7 @@ APPLICATION_ID = "org.aiidalab.aiidalab_launch"
 LOGGER = logging.getLogger(APPLICATION_ID.split(".")[-1])
 
 
-def _default_home_mount():
+def _default_home_mount() -> str:
     return str(Path.home().joinpath("aiidalab"))
 
 
@@ -44,10 +44,10 @@ class Profile:
     image: str = "aiidalab/aiidalab-docker-stack:latest"
     home_mount: Optional[str] = field(default_factory=lambda: _default_home_mount())
 
-    def container_name(self):
+    def container_name(self) -> str:
         return f"{CONTAINER_PREFIX}{self.name}"
 
-    def environment(self, jupyter_token):
+    def environment(self, jupyter_token) -> dict:
         return {
             "AIIDALAB_DEFAULT_APPS": " ".join(self.default_apps),
             "JUPYTER_TOKEN": str(jupyter_token),
@@ -169,7 +169,7 @@ class AiidaLabInstance:
             else []
         )
 
-    def pull(self):
+    def pull(self) -> docker.models.images.Image:
         try:
             image = self.client.images.pull(self.profile.image)
             LOGGER.info(f"Pulled image: {image}")
@@ -231,7 +231,7 @@ class AiidaLabInstance:
             workdir=None if privileged else f"/home/{self.profile.system_user}",
         )["Id"]
 
-    async def _wait_for_services(self):
+    async def _wait_for_services(self) -> None:
         if self.container is None:
             raise RuntimeError("Instance was not created.")
 
@@ -242,7 +242,8 @@ class AiidaLabInstance:
             None, self.container.exec_run, "wait-for-services"
         )
 
-        async def _echo_logs():
+        async def _echo_logs() -> None:
+            assert self.container is not None
             with _async_logs(self.container) as logs:
                 async for chunk in logs:
                     if logging.DEBUG < LOGGER.getEffectiveLevel() < logging.ERROR:
@@ -264,7 +265,7 @@ class AiidaLabInstance:
         else:
             LOGGER.info(f"Services are up ({self.container.id}).")
 
-    def wait_for_services(self, timeout=None):
+    def wait_for_services(self, timeout=None) -> None:
         start = time.time()
         try:
             asyncio.run(asyncio.wait_for(self._wait_for_services(), timeout))
@@ -300,15 +301,15 @@ class AiidaLabInstance:
             result = self.container.exec_run("/bin/sh -c 'echo $JUPYTER_TOKEN'")
             if result.exit_code == 0:
                 return result.output.decode().strip()
-            else:
-                return None
+        return None
 
     def host_port(self) -> Optional[int]:
         if self.container:
             try:
                 return self.container.ports["8888/tcp"][0]["HostPort"]
             except (KeyError, IndexError):
-                return None
+                pass
+        return None
 
     def url(self) -> str:
         if self.status() is not self.AiidaLabInstanceStatus.UP:
