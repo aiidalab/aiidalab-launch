@@ -128,7 +128,14 @@ class AiidaLabInstance:
 
     client: docker.DockerClient
     profile: Profile
+    _image: docker.models.images.Image = None
     _container: docker.models.containers.Container = None
+
+    def _get_image(self):
+        try:
+            return self.client.images.get(self.profile.image)
+        except docker.errors.ImageNotFound:
+            return None
 
     def _get_container(self):
         try:
@@ -137,7 +144,12 @@ class AiidaLabInstance:
             return None
 
     def __post_init__(self):
+        self._image = self._get_image()
         self._container = self._get_container()
+
+    @property
+    def image(self) -> Optional[docker.models.images.Image]:
+        return self._image
 
     @property
     def container(self) -> Optional[docker.models.containers.Container]:
@@ -161,6 +173,7 @@ class AiidaLabInstance:
         try:
             image = self.client.images.pull(self.profile.image)
             LOGGER.info(f"Pulled image: {image}")
+            self._image = image
             return image
         except docker.errors.ImageNotFound:
             raise RuntimeError(f"Unable to pull image: {self.profile.image}")
@@ -170,14 +183,9 @@ class AiidaLabInstance:
             LOGGER.info(f"Ensure home mount point ({self.profile.home_mount}) exists.")
             Path(self.profile.home_mount).mkdir(exist_ok=True)
 
-        try:
-            image = self.client.images.get(self.profile.image)
-        except docker.errors.ImageNotFound:
-            image = self.pull()
-
         assert self._container is None
         self._container = self.client.containers.create(
-            image=image,
+            image=(self.image or self.pull()),
             name=self.profile.container_name(),
             environment=self.profile.environment(jupyter_token=token_hex(32)),
             mounts=self._mounts,
