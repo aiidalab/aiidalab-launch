@@ -160,7 +160,7 @@ class AiidaLabInstance:
             LOGGER.info(f"Ensure home mount point ({self.profile.home_mount}) exists.")
             Path(self.profile.home_mount).mkdir(exist_ok=True)
 
-        return self.client.containers.run(
+        return self.client.containers.create(
             image=self.profile.image,
             name=self.profile.container_name(),
             environment=self.profile.environment(jupyter_token=token_hex(32)),
