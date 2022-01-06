@@ -5,6 +5,7 @@ import webbrowser
 from contextlib import contextmanager
 from textwrap import wrap
 from threading import Event, Thread, Timer
+from typing import Any, AsyncGenerator, Generator, Iterable
 
 import click
 import click_spinner
@@ -20,13 +21,15 @@ MSG_UNABLE_TO_COMMUNICATE_WITH_CLIENT = (
 
 
 @contextmanager
-def spinner(msg=None, final=None, delay=0):
+def spinner(
+    msg: str = None, final: str = None, delay: float = 0
+) -> Generator[None, None, None]:
     """Display spinner only after an optional initial delay."""
 
-    def spin():
+    def spin() -> None:
         if msg:
             click.echo(f"{msg.rstrip()} ", nl=False, err=True)
-        with click_spinner.spinner():
+        with click_spinner.spinner():  # type: ignore
             stop.wait()
         click.echo(
             (final or "done.") if (completed.is_set() and msg) else " ", err=True
@@ -48,7 +51,7 @@ def spinner(msg=None, final=None, delay=0):
         timed_spinner.join()
 
 
-def get_docker_client(*args, **kwargs):
+def get_docker_client(*args, **kwargs) -> docker.client.DockerClient:
     try:
         with spinner("Connecting to docker host...", delay=0.2):
             return docker.from_env(*args, **kwargs)
@@ -61,7 +64,7 @@ def get_docker_client(*args, **kwargs):
         raise click.ClickException(f"Failed to communicate with Docker client: {error}")
 
 
-def webbrowser_available():
+def webbrowser_available() -> bool:
     """Check whether a webbrowser is available.
 
     Useful to provide more targeted user feedback, e.g., when AiiDAlab is
@@ -77,14 +80,14 @@ def webbrowser_available():
 
 
 # Adapted from: https://stackoverflow.com/a/62297994
-def _async_wrap_iter(it):
+def _async_wrap_iter(it: Iterable) -> AsyncGenerator[Any, None]:
     """Wrap blocking iterator into an asynchronous one"""
     loop = asyncio.get_event_loop()
-    q = asyncio.Queue(1)
+    q: asyncio.Queue = asyncio.Queue(1)
     exception = None
     _END = object()
 
-    async def yield_queue_items():
+    async def yield_queue_items() -> AsyncGenerator[Any, None]:
         while True:
             next_item = await q.get()
             if next_item is _END:
@@ -94,7 +97,7 @@ def _async_wrap_iter(it):
             # the iterator has raised, propagate the exception
             raise exception
 
-    def iter_to_queue():
+    def iter_to_queue() -> None:
         nonlocal exception
         try:
             for item in it:
