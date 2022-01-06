@@ -152,6 +152,7 @@ class AiidaLabInstance:
         try:
             image = self.client.images.pull(self.profile.image)
             LOGGER.info(f"Pulled image: {image}")
+            return image
         except docker.errors.ImageNotFound:
             raise RuntimeError(f"Unable to pull image: {self.profile.image}")
 
