@@ -80,7 +80,7 @@ pass_app_state = click.make_pass_decorator(ApplicationState, ensure=True)
 
 
 def with_profile(cmd):
-    def callback(ctx, param, value):
+    def callback(ctx, param, value):  # noqa: U100
         app_state = ctx.ensure_object(ApplicationState)
         name = value or app_state.config.default_profile
         LOGGER.info(f"Using profile: {name}")
