@@ -70,7 +70,9 @@ def test_instance_init(instance):
 
 @pytest.mark.trylast
 def test_instance_create_remove(instance):
+    assert instance.status() is instance.AiidaLabInstanceStatus.DOWN
     instance.create()
+    assert instance.status() is instance.AiidaLabInstanceStatus.CREATED
     # The instance is automatically stopped and removed by the fixture
     # function.
 
