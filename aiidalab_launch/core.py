@@ -160,8 +160,13 @@ class AiidaLabInstance:
             LOGGER.info(f"Ensure home mount point ({self.profile.home_mount}) exists.")
             Path(self.profile.home_mount).mkdir(exist_ok=True)
 
+        try:
+            image = self.client.images.get(self.profile.image)
+        except docker.errors.ImageNotFound:
+            image = self.pull()
+
         return self.client.containers.create(
-            image=self.profile.image,
+            image=image,
             name=self.profile.container_name(),
             environment=self.profile.environment(jupyter_token=token_hex(32)),
             mounts=self._mounts,
