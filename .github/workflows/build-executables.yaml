@@ -23,6 +23,11 @@ jobs:
             - name: Install pyinstaller
               run: python -m pip install pyinstaller==4.7
 
+            - name: Build executable
+              run: |
+                  pip install .
+                  pyinstaller aiidalab-launch.spec
+
             - name: Upload distribution artifact
               uses: actions/upload-artifact@v2
               with:
