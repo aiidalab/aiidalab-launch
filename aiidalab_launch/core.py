@@ -188,12 +188,14 @@ class AiidaLabInstance:
         except docker.errors.ImageNotFound:
             raise RuntimeError(f"Unable to pull image: {self.profile.image}")
 
-    def create(self) -> docker.models.containers.Container:
+    def _ensure_home_mount_exists(self) -> None:
         if self.profile.home_mount:
             LOGGER.info(f"Ensure home mount point ({self.profile.home_mount}) exists.")
             Path(self.profile.home_mount).mkdir(exist_ok=True)
 
+    def create(self) -> docker.models.containers.Container:
         assert self._container is None
+        self._ensure_home_mount_exists()
         self._container = self.client.containers.create(
             image=(self.image or self.pull()),
             name=self.profile.container_name(),
@@ -204,6 +206,7 @@ class AiidaLabInstance:
         return self._container
 
     def start(self) -> None:
+        self._ensure_home_mount_exists()
         LOGGER.info(f"Starting container '{self.profile.container_name()}'...")
         (self.container or self.create()).start()
         assert self.container is not None
