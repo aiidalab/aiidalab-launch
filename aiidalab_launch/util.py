@@ -1,14 +1,18 @@
 # -*- coding: utf-8 -*-
 import asyncio
+import logging
 import webbrowser
 from contextlib import contextmanager
 from textwrap import wrap
 from threading import Event, Thread, Timer
-from typing import Any, AsyncGenerator, Generator, Iterable
+from typing import Any, AsyncGenerator, Generator, Iterable, Optional
 
 import click
 import click_spinner
 import docker
+import requests
+from packaging.version import parse
+from requests_cache import CachedSession
 
 MSG_UNABLE_TO_COMMUNICATE_WITH_CLIENT = (
     "Unable to communicate with docker on this host. This error usually indicates "
@@ -16,6 +20,15 @@ MSG_UNABLE_TO_COMMUNICATE_WITH_CLIENT = (
     "not started, or that the installation is ill-configured.  Please follow the "
     "instructions at https://docs.docker.com/get-docker/ to install and start "
     "docker."
+)
+
+
+SESSION = CachedSession(
+    "http_cache",
+    backend="sqlite",
+    use_cache_dir=True,
+    expire_after=3600,  # 1hr
+    stale_if_error=True,
 )
 
 
@@ -110,3 +123,27 @@ def _async_wrap_iter(it: Iterable) -> AsyncGenerator[Any, None]:
 
     Thread(target=iter_to_queue).start()
     return yield_queue_items()
+
+
+def get_latest_version(timeout: float = 0.1) -> Optional[str]:
+    """Determine the latest released version (on PyPI) of this tool."""
+    try:
+        req = SESSION.get(
+            "https://pypi.python.org/pypi/aiidalab-launch/json", timeout=timeout
+        )
+        req.raise_for_status()
+        releases = sorted(
+            [
+                version
+                for version, release in req.json()["releases"].items()
+                if not all(r["yanked"] for r in release)
+            ],
+            key=parse,
+        )
+        return parse(releases[-1]) if releases else None
+    except requests.exceptions.Timeout:
+        logging.debug("Timed out while requesting latest version.")
+        return None
+    except OSError as error:
+        logging.debug(f"Error while requesting latest version: {error}")
+        return None
