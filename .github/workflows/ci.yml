@@ -48,3 +48,36 @@ jobs:
 
             - name: Run tests
               run: python -m pytest -v --slow
+
+    test-installation-with-pipx:
+
+        needs: [pre-commit]
+
+        runs-on: ubuntu-latest
+        timeout-minutes: 10
+
+        strategy:
+            fail-fast: false
+            matrix:
+                python-version: ['3.7', '3.8', '3.9', '3.10']
+
+        steps:
+
+            - uses: actions/checkout@v2
+              with:
+                  fetch-depth: 0
+                  submodules: true
+
+            - uses: actions/setup-python@v2
+              with:
+                  python-version: ${{ matrix.python-version }}
+
+            - name: Install with pipx
+              run: |
+                  which python
+                  python -m pip install pipx
+                  pipx install ${{ github.workspace }}
+
+            - name: Run smoke tests
+              run: |
+                  aiidalab-launch version
