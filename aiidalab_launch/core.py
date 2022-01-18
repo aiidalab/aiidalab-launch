@@ -196,7 +196,7 @@ class AiidaLabInstance:
         assert self._container is None
         self._ensure_home_mount_exists()
         self._container = self.client.containers.create(
-            image=(self.image or self.pull()),
+            image=(self.image or self.pull()).attrs["RepoDigests"][0],
             name=self.profile.container_name(),
             environment=self.profile.environment(jupyter_token=token_hex(32)),
             mounts=self._mounts,
