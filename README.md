@@ -7,13 +7,20 @@ AiiDAlab Launch makes it easy to run AiiDAlab on your own workstation or laptop.
 To use AiiDAlab launch you will have to
 
 1. [Install Docker on your workstation or laptop.](https://docs.docker.com/get-docker/)
-2. Install AiiDAlab launch and start AiiDAlab with
+2. Install AiiDAlab launch with [pipx](https://pypa.github.io/pipx/installation/) (**recommended**):
 
-    ```bash
-    pip install aiidalab-launch
+   ```console
+   pipx install aiidalab-launch
+   ```
+
+   _Or directly with pip (`pip install aiidalab-launch`)._
+
+3. Start AiiDAlab with
+
+    ```console
     aiidalab-launch start
     ```
-3. Follow the instructions on screen to open AiiDAlab in the browser.
+4. Follow the instructions on screen to open AiiDAlab in the browser.
 
 See `aiidalab-launch --help` for detailed help.
 
