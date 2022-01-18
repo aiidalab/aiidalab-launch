@@ -11,7 +11,7 @@ import click
 import click_spinner
 import docker
 import requests
-from packaging.version import parse
+from packaging.version import Version, parse
 from requests_cache import CachedSession
 
 MSG_UNABLE_TO_COMMUNICATE_WITH_CLIENT = (
@@ -125,7 +125,7 @@ def _async_wrap_iter(it: Iterable) -> AsyncGenerator[Any, None]:
     return yield_queue_items()
 
 
-def get_latest_version(timeout: float = 0.1) -> Optional[str]:
+def get_latest_version(timeout: float = 0.1) -> Optional[Version]:
     """Determine the latest released version (on PyPI) of this tool."""
     try:
         req = SESSION.get(
