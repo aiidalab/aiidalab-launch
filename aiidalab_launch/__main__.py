@@ -13,10 +13,11 @@ from textwrap import wrap
 
 import click
 import docker
+from packaging.version import parse
 from tabulate import tabulate
 
 from .core import APPLICATION_ID, LOGGER, AiidaLabInstance, Config, Profile
-from .util import get_docker_client, spinner, webbrowser_available
+from .util import get_docker_client, get_latest_version, spinner, webbrowser_available
 from .version import __version__
 
 MSG_MOUNT_POINT_CONFLICT = """Warning: There is at least one other running
@@ -112,6 +113,15 @@ def cli(verbose):
         )
 
     LOGGER.info(f"Configuration file path: {_application_config_path()}")
+
+    latest_version = get_latest_version(timeout=0.1)
+    if latest_version and latest_version > parse(__version__):
+        click.secho(
+            f"A new version of aiidalab-launch is available: {latest_version} (installed: {__version__})",
+            fg="yellow",
+        )
+        if "pipx" in __file__:
+            click.secho("Run `pipx upgrade aiidalab-launch` to update.", fg="yellow")
 
 
 @cli.command()

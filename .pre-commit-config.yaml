@@ -40,8 +40,9 @@ repos:
           - id: mypy
             additional_dependencies:
                 - types-click-spinner
-                - types-toml
+                - types-requests
                 - types-tabulate
+                - types-toml
 
     - repo: https://github.com/asottile/setup-cfg-fmt
       rev: v1.20.0
