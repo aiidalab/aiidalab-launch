@@ -5,7 +5,6 @@ from __future__ import annotations
 
 import asyncio
 import logging
-import time
 from contextlib import contextmanager
 from dataclasses import asdict, dataclass, field
 from enum import Enum, auto
@@ -264,10 +263,6 @@ class AiidaLabInstance:
         loop = asyncio.get_event_loop()
         LOGGER.info(f"Waiting for services to come up ({self.container.id})...")
 
-        wait_for_services = loop.run_in_executor(
-            None, self.container.exec_run, "wait-for-services"
-        )
-
         async def _echo_logs() -> None:
             assert self.container is not None
             with _async_logs(self.container) as logs:
@@ -281,28 +276,43 @@ class AiidaLabInstance:
                             f"{self.container.id}: {chunk.decode('utf-8').strip()}"
                         )
 
+        async def _init_scripts_finished() -> None:
+            assert self.container is not None
+            logging.info("Waiting for init services to finish...")
+            result = await loop.run_in_executor(
+                None, self.container.exec_run, "wait-for-services"
+            )
+            if result.exit_code != 0:
+                raise FailedToWaitForServices(
+                    "Failed to check for init processes to complete."
+                )
+
+        async def _notebook_service_online() -> None:
+            assert self.container is not None
+            logging.info("Waiting for notebook service to become reachable...")
+            while True:
+                result = await loop.run_in_executor(
+                    None,
+                    self.container.exec_run,
+                    "curl --fail-early --fail --silent --max-time 1.0 http://localhost:8888",
+                )
+                if result.exit_code == 0:
+                    return  # jupyter is online
+                elif result.exit_code in (7, 28):
+                    await asyncio.sleep(1)  # jupyter not yet reachable
+                    continue
+                else:
+                    raise FailedToWaitForServices("Failed to reach notebook service.")
+
         echo_logs = asyncio.create_task(_echo_logs())  # start logging
-        result = await wait_for_services
+        await asyncio.gather(_init_scripts_finished(), _notebook_service_online())
         echo_logs.cancel()
 
-        if result.exit_code != 0:
-            LOGGER.info(f"Failed to wait for services ({self.container.id}).")
-            raise FailedToWaitForServices
-        else:
-            LOGGER.info(f"Services are up ({self.container.id}).")
-
     def wait_for_services(self, timeout: Optional[float] = None) -> None:
-        start = time.time()
         try:
             asyncio.run(asyncio.wait_for(self._wait_for_services(), timeout))
         except asyncio.TimeoutError:
             raise TimeoutError
-        stop = time.time()
-        if stop - start > 2:
-            # It is likely that the server *just* started up, wait a few more
-            # seconds, otherwise trying to access the instance right away  will
-            # likely fail.
-            time.sleep(5)
 
     def status(self, timeout: Optional[float] = 3.0) -> AiidaLabInstanceStatus:
         if self.container:
