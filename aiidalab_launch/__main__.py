@@ -178,7 +178,11 @@ def add_profile(ctx, app_state, profile):
     else:
         raise click.ClickException(f"Profile with name '{profile}' already exists.")
 
-    new_profile = Profile(name=profile)
+    try:
+        new_profile = Profile(name=profile)
+    except ValueError as error:  # invalid profile name
+        raise click.ClickException(error)
+
     app_state.config.profiles.append(new_profile)
     app_state.config.save(_application_config_path())
     click.echo(f"Added profile '{profile}'.")
