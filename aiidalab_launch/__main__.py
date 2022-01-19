@@ -462,7 +462,11 @@ def stop(app_state, profile, remove, timeout):
     """Stop an AiiDAlab instance on this host."""
     instance = AiidaLabInstance(client=app_state.docker_client, profile=profile)
     status = instance.status()
-    if status is instance.AiidaLabInstanceStatus.UP:
+    if status not in (
+        instance.AiidaLabInstanceStatus.DOWN,
+        instance.AiidaLabInstanceStatus.CREATED,
+        instance.AiidaLabInstanceStatus.EXITED,
+    ):
         with spinner("Stopping AiiDAlab...", final="stopped."):
             instance.stop(timeout=timeout)
     if remove:
