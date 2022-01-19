@@ -262,11 +262,11 @@ class AiidaLabInstance:
 
         logging.debug("Ensure ~/.conda directory is owned by the system user.")
         exit_code, _ = self.container.exec_run(
-            f"chown -R {self.profile.system_user}:{self.profile.system_user} /home/{self.profile.system_user}/.conda",
+            f"chown -R 1000:1000 /home/{self.profile.system_user}/.conda",
             privileged=True,
         )
         if exit_code != 0:
-            raise RuntimeError(
+            logging.warn(
                 "Failed to ensure ~/.conda directory is owned by the system user."
             )
 
@@ -281,11 +281,23 @@ class AiidaLabInstance:
     def remove(self) -> None:
         self._requires_container()
         assert self.container is not None
+
+        # Remove container
         try:
             self.container.remove()
             self._container = None
         except AttributeError:
             raise RuntimeError("no container")
+
+        # Remove conda volume
+        try:
+            self.client.volumes.get(self.profile.conda_volume_name()).remove()
+        except docker.errors.NotFound:  # already removed
+            logging.debug(
+                f"Failed to remove conda volume '{self.profile.conda_volume_name()}', likely already removed."
+            )
+        except Exception as error:  # unexpected error
+            raise RuntimeError(f"Failed to remove conda volume: {error}")
 
     def logs(
         self, stream: bool = False, follow: bool = False
