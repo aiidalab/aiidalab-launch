@@ -5,12 +5,14 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import re
 from contextlib import contextmanager
 from dataclasses import asdict, dataclass, field
 from enum import Enum, auto
 from pathlib import Path
 from secrets import token_hex
 from typing import Any, AsyncGenerator, Generator, List, Optional, Union
+from urllib.parse import quote_plus
 from uuid import uuid4
 
 import docker
@@ -27,6 +29,12 @@ DEFAULT_PORT = 8888
 APPLICATION_ID = "org.aiidalab.aiidalab_launch"
 
 LOGGER = logging.getLogger(APPLICATION_ID.split(".")[-1])
+
+# Regular expression for valid container names as of Docker version 20.10.11:
+# [a-zA-Z0-9][a-zA-Z0-9_.-]
+# In addition we do not allow underscores to avoid potential issues with moving
+# to a docker-compose based implementation of aiidalab-launch in the future.
+_REGEX_VALID_PROFILE_NAMES = r"[a-zA-Z0-9][a-zA-Z0-9.-]+"
 
 
 def _default_home_mount() -> str:
@@ -45,6 +53,17 @@ class Profile:
     system_user: str = "aiida"
     image: str = "aiidalab/aiidalab-docker-stack:latest"
     home_mount: Optional[str] = field(default_factory=lambda: _default_home_mount())
+
+    def __post_init__(self):
+        if (
+            not re.fullmatch(_REGEX_VALID_PROFILE_NAMES, self.name)
+            or quote_plus(self.name) != self.name
+        ):
+            raise ValueError(
+                f"Invalid profile name '{self.name}'. The profile name must be "
+                "composed of the following characters [a-zA-Z0-9.-] and must "
+                "start with an alphanumeric character."
+            )
 
     def container_name(self) -> str:
         return f"{CONTAINER_PREFIX}{self.name}"
