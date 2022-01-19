@@ -360,7 +360,9 @@ def start(app_state, profile, restart, wait, pull, no_browser, show_ssh_help, fo
                 if recreate:
                     instance.stop()
                     instance.remove()
-                instance.start()
+                    instance.start()
+                else:
+                    instance.restart()
         elif status is InstanceStatus.UP and not restart:
             if recreate:
                 click.secho(
