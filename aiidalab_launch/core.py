@@ -68,6 +68,9 @@ class Profile:
     def container_name(self) -> str:
         return f"{CONTAINER_PREFIX}{self.name}"
 
+    def conda_volume_name(self) -> str:
+        return f"{self.container_name()}_conda"
+
     def environment(self, jupyter_token: str) -> dict:
         return {
             "AIIDALAB_DEFAULT_APPS": " ".join(self.default_apps),
@@ -182,19 +185,36 @@ class AiidaLabInstance:
         if self.container is None:
             raise RuntimeError("This function requires a container instance.")
 
-    @property
-    def _mounts(self) -> List[docker.types.Mount]:
-        return (
-            [
-                docker.types.Mount(
-                    target=f"/home/{self.profile.system_user}",
-                    source=self.profile.home_mount,
-                    type="bind",
-                )
-            ]
-            if self.profile.home_mount
-            else []
+    def _conda_mount(self) -> docker.types.Mount:
+        return docker.types.Mount(
+            target=f"/home/{self.profile.system_user}/.conda",
+            source=self.profile.conda_volume_name(),
         )
+
+    def _home_mount(self) -> docker.types.Mount:
+        assert self.profile.home_mount is not None
+        return docker.types.Mount(
+            target=f"/home/{self.profile.system_user}",
+            source=self.profile.home_mount,
+            type="bind",
+        )
+
+    def _mounts(self) -> Generator[docker.types.Mount, None, None]:
+        yield self._conda_mount()
+        if self.profile.home_mount:
+            yield self._home_mount()
+
+    def configuration_changes(self) -> Generator[str, None, None]:
+        assert self.container is not None
+        assert self.image is not None
+
+        if self.container.image.id != self.image.id:
+            yield "Image has changed."
+
+        if self.profile.conda_volume_name() not in (
+            mount.get("Name") for mount in self.container.attrs["Mounts"]
+        ):
+            yield "Mount point configuration has changed."
 
     def pull(self) -> docker.models.images.Image:
         try:
@@ -217,7 +237,7 @@ class AiidaLabInstance:
             image=(self.image or self.pull()).attrs["RepoDigests"][0],
             name=self.profile.container_name(),
             environment=self.profile.environment(jupyter_token=token_hex(32)),
-            mounts=self._mounts,
+            mounts=list(self._mounts()),
             ports={"8888/tcp": self.profile.port},
         )
         return self._container
@@ -228,11 +248,27 @@ class AiidaLabInstance:
         (self.container or self.create()).start()
         assert self.container is not None
         LOGGER.info(f"Started container: {self.container.name} ({self.container.id}).")
+        self._run_post_start()
 
     def restart(self) -> None:
         self._requires_container()
         assert self.container is not None
         self.container.restart()
+        self._run_post_start()
+
+    def _run_post_start(self) -> None:
+        assert self.container is not None
+        logging.debug("Run post-start commands.")
+
+        logging.debug("Ensure ~/.conda directory is owned by the system user.")
+        exit_code, _ = self.container.exec_run(
+            f"chown -R {self.profile.system_user}:{self.profile.system_user} /home/{self.profile.system_user}/.conda",
+            privileged=True,
+        )
+        if exit_code != 0:
+            raise RuntimeError(
+                "Failed to ensure ~/.conda directory is owned by the system user."
+            )
 
     def stop(self, timeout: Optional[float] = None) -> None:
         self._requires_container()

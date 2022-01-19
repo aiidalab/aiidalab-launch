@@ -341,7 +341,15 @@ def start(app_state, profile, restart, wait, pull, no_browser, show_ssh_help, fo
 
     # Check if image has changed.
     assert instance.image is not None
-    recreate = instance.container and instance.container.image.id != instance.image.id
+    image_changed = (
+        instance.container and instance.container.image.id != instance.image.id
+    )
+    mounts_changed = (
+        instance.container
+        and f"{instance.profile.container_name()}_conda"
+        not in (mount.get("Name") for mount in instance.container.attrs["Mounts"])
+    )
+    recreate = image_changed or mounts_changed
 
     try:
 
@@ -361,17 +369,17 @@ def start(app_state, profile, restart, wait, pull, no_browser, show_ssh_help, fo
                 instance.start()
         elif status is InstanceStatus.UP and restart:
             with spinner("Restarting container..."):
-                if recreate:
+                if any(instance.configuration_changes()):
                     instance.stop()
                     instance.remove()
                     instance.start()
                 else:
                     instance.restart()
         elif status is InstanceStatus.UP and not restart:
-            if recreate:
+            if any(instance.configuration_changes()):
                 click.secho(
-                    "Container is already running, however the image has changed. "
-                    "A restart with --restart is recommended.",
+                    "Container is already running, however the configuration "
+                    "has changed. A restart with --restart is recommended.",
                     fg="yellow",
                 )
             else:
