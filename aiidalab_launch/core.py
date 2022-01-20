@@ -323,57 +323,57 @@ class AiidaLabInstance:
                 f"Unable to send command to container '{self.container.id}'."
             )
 
+    async def _echo_logs(self) -> None:
+        assert self.container is not None
+        with _async_logs(self.container) as logs:
+            async for chunk in logs:
+                if logging.DEBUG < LOGGER.getEffectiveLevel() < logging.ERROR:
+                    # For 'intermediate' verbosity, echo directly to STDOUT.
+                    print(chunk.decode("utf-8").strip())
+                else:
+                    # Otherwise, echo to the debug log.
+                    LOGGER.debug(
+                        f"{self.container.id}: {chunk.decode('utf-8').strip()}"
+                    )
+
+    async def _init_scripts_finished(self) -> None:
+        assert self.container is not None
+        loop = asyncio.get_event_loop()
+        logging.info("Waiting for init services to finish...")
+        result = await loop.run_in_executor(
+            None, self.container.exec_run, "wait-for-services"
+        )
+        if result.exit_code != 0:
+            raise FailedToWaitForServices(
+                "Failed to check for init processes to complete."
+            )
+
+    async def _notebook_service_online(self) -> None:
+        assert self.container is not None
+        loop = asyncio.get_event_loop()
+        logging.info("Waiting for notebook service to become reachable...")
+        while True:
+            result = await loop.run_in_executor(
+                None,
+                self.container.exec_run,
+                "curl --fail-early --fail --silent --max-time 1.0 http://localhost:8888",
+            )
+            if result.exit_code == 0:
+                return  # jupyter is online
+            elif result.exit_code in (7, 28):
+                await asyncio.sleep(1)  # jupyter not yet reachable
+                continue
+            else:
+                raise FailedToWaitForServices("Failed to reach notebook service.")
+
     async def _wait_for_services(self) -> None:
         if self.container is None:
             raise RuntimeError("Instance was not created.")
 
-        loop = asyncio.get_event_loop()
         LOGGER.info(f"Waiting for services to come up ({self.container.id})...")
-
-        async def _echo_logs() -> None:
-            assert self.container is not None
-            with _async_logs(self.container) as logs:
-                async for chunk in logs:
-                    if logging.DEBUG < LOGGER.getEffectiveLevel() < logging.ERROR:
-                        # For 'intermediate' verbosity, echo directly to STDOUT.
-                        print(chunk.decode("utf-8").strip())
-                    else:
-                        # Otherwise, echo to the debug log.
-                        LOGGER.debug(
-                            f"{self.container.id}: {chunk.decode('utf-8').strip()}"
-                        )
-
-        async def _init_scripts_finished() -> None:
-            assert self.container is not None
-            logging.info("Waiting for init services to finish...")
-            result = await loop.run_in_executor(
-                None, self.container.exec_run, "wait-for-services"
-            )
-            if result.exit_code != 0:
-                raise FailedToWaitForServices(
-                    "Failed to check for init processes to complete."
-                )
-
-        async def _notebook_service_online() -> None:
-            assert self.container is not None
-            logging.info("Waiting for notebook service to become reachable...")
-            while True:
-                result = await loop.run_in_executor(
-                    None,
-                    self.container.exec_run,
-                    "curl --fail-early --fail --silent --max-time 1.0 http://localhost:8888",
-                )
-                if result.exit_code == 0:
-                    return  # jupyter is online
-                elif result.exit_code in (7, 28):
-                    await asyncio.sleep(1)  # jupyter not yet reachable
-                    continue
-                else:
-                    raise FailedToWaitForServices("Failed to reach notebook service.")
-
-        echo_logs = asyncio.create_task(_echo_logs())  # start logging
-        await asyncio.gather(_init_scripts_finished(), _notebook_service_online())
-        echo_logs.cancel()
+        await asyncio.gather(
+            self._init_scripts_finished(), self._notebook_service_online()
+        )
 
     def wait_for_services(self, timeout: Optional[float] = None) -> None:
         try:
