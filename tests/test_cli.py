@@ -7,6 +7,7 @@
 This is the test module for the project's command-line interface (CLI)
 module.
 """
+import pytest
 from click.testing import CliRunner, Result
 
 import aiidalab_launch.__main__ as cli
@@ -68,3 +69,15 @@ def test_add_remove_profile():
     assert result.exit_code == 0
     result: Result = runner.invoke(cli.cli, ["profiles", "list"])
     assert "new-profile" not in result.output
+
+
+@pytest.mark.slow
+@pytest.mark.trylast
+def test_start_stop(instance):
+    runner: CliRunner = CliRunner()
+    result: Result = runner.invoke(cli.cli, ["start"])
+    assert result.exit_code == 0
+    result: Result = runner.invoke(cli.cli, ["status"])
+    assert result.exit_code == 0
+    result: Result = runner.invoke(cli.cli, ["stop"])
+    assert result.exit_code == 0
