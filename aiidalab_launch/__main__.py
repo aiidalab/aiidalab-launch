@@ -378,7 +378,7 @@ async def _async_start(
             try:
                 with spinner("Waiting for AiiDAlab instance to get ready..."):
                     echo_logs = asyncio.create_task(instance.echo_logs())
-                    await asyncio.wait_for(instance._wait_for_services(), timeout=wait)
+                    await asyncio.wait_for(instance.wait_for_services(), timeout=wait)
                     echo_logs.cancel()
             except RuntimeError:
                 raise click.ClickException(
