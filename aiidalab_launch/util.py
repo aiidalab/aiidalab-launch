@@ -141,7 +141,7 @@ def get_latest_version(timeout: float = 0.1) -> Optional[Version]:
             key=parse,
         )
         return parse(releases[-1]) if releases else None
-    except requests.exceptions.Timeout:
+    except (requests.exceptions.Timeout, requests.exceptions.ReadTimeout):
         logging.debug("Timed out while requesting latest version.")
         return None
     except OSError as error:
