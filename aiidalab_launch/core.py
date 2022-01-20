@@ -323,18 +323,11 @@ class AiidaLabInstance:
                 f"Unable to send command to container '{self.container.id}'."
             )
 
-    async def _echo_logs(self) -> None:
+    async def echo_logs(self) -> None:
         assert self.container is not None
         with _async_logs(self.container) as logs:
             async for chunk in logs:
-                if logging.DEBUG < LOGGER.getEffectiveLevel() < logging.ERROR:
-                    # For 'intermediate' verbosity, echo directly to STDOUT.
-                    print(chunk.decode("utf-8").strip())
-                else:
-                    # Otherwise, echo to the debug log.
-                    LOGGER.debug(
-                        f"{self.container.id}: {chunk.decode('utf-8').strip()}"
-                    )
+                LOGGER.debug(f"{self.container.id}: {chunk.decode('utf-8').strip()}")
 
     async def _init_scripts_finished(self) -> None:
         assert self.container is not None

@@ -377,12 +377,14 @@ async def _async_start(
         if wait:
             try:
                 with spinner("Waiting for AiiDAlab instance to get ready..."):
+                    echo_logs = asyncio.create_task(instance.echo_logs())
                     await asyncio.wait_for(instance._wait_for_services(), timeout=wait)
+                    echo_logs.cancel()
             except RuntimeError:
                 raise click.ClickException(
                     "The AiiDAlab instance failed to start. Consider to inspect "
                     "the container output logs by increasing the output "
-                    "verbosity with 'aiidalab-launch -v start'."
+                    "verbosity with 'aiidalab-launch -vvv start'."
                 )
             url = instance.url()
             msg_startup = (
