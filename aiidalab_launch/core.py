@@ -381,7 +381,7 @@ class AiidaLabInstance:
             if self.container.status == "running":
                 try:
                     await asyncio.wait_for(self._wait_for_services(), timeout=timeout)
-                except asyncio.exceptions.TimeoutError:
+                except asyncio.TimeoutError:
                     return self.AiidaLabInstanceStatus.STARTING
                 except RuntimeError:
                     return self.AiidaLabInstanceStatus.UNKNOWN
