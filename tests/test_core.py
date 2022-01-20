@@ -5,6 +5,7 @@
 .. currentmodule:: test_core
 .. moduleauthor:: Carl Simon Adorf <simon.adorf@epfl.ch>
 """
+import asyncio
 import sys
 from dataclasses import replace
 from time import sleep
@@ -103,7 +104,7 @@ async def test_instance_start_stop(instance):
     # premature additional start should have no negative effect
     instance.start()
 
-    await instance.wait_for_services(timeout=300)
+    await asyncio.wait_for(instance.wait_for_services(), timeout=300)
     assert await instance.status() is instance.AiidaLabInstanceStatus.UP
     instance.stop()
     assert await instance.status() is instance.AiidaLabInstanceStatus.EXITED
