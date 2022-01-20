@@ -574,10 +574,10 @@ def exec(ctx, profile, cmd, privileged, forward_exit_code, wait):
     try:
         if wait:
             with spinner("Waiting for AiiDAlab to get ready...", delay=0.5):
-                instance.wait_for_services(timeout=60)
+                asyncio.run(asyncio.wait_for(instance.wait_for_services(), timeout=60))
         with spinner("Send command to container...", delay=1.0):
             exec_id = instance.exec_create(" ".join(cmd), privileged=privileged)
-    except RuntimeError:
+    except (RuntimeError, asyncio.TimeoutError):
         raise click.ClickException("AiiDAlab instance is not available. Is it running?")
 
     output = app_state.docker_client.api.exec_start(exec_id, stream=True)

@@ -359,7 +359,7 @@ class AiidaLabInstance:
             else:
                 raise FailedToWaitForServices("Failed to reach notebook service.")
 
-    async def _wait_for_services(self) -> None:
+    async def wait_for_services(self) -> None:
         if self.container is None:
             raise RuntimeError("Instance was not created.")
 
@@ -368,19 +368,13 @@ class AiidaLabInstance:
             self._init_scripts_finished(), self._notebook_service_online()
         )
 
-    def wait_for_services(self, timeout: Optional[float] = None) -> None:
-        try:
-            asyncio.run(asyncio.wait_for(self._wait_for_services(), timeout))
-        except asyncio.TimeoutError:
-            raise TimeoutError
-
     async def status(self, timeout: Optional[float] = 5.0) -> AiidaLabInstanceStatus:
         if self.container:
             self.container.reload()
             await asyncio.sleep(0)
             if self.container.status == "running":
                 try:
-                    await asyncio.wait_for(self._wait_for_services(), timeout=timeout)
+                    await asyncio.wait_for(self.wait_for_services(), timeout=timeout)
                 except asyncio.TimeoutError:
                     return self.AiidaLabInstanceStatus.STARTING
                 except RuntimeError:

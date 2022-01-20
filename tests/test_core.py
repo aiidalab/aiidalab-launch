@@ -103,7 +103,7 @@ async def test_instance_start_stop(instance):
     # premature additional start should have no negative effect
     instance.start()
 
-    instance.wait_for_services(timeout=300)
+    await instance.wait_for_services(timeout=300)
     assert await instance.status() is instance.AiidaLabInstanceStatus.UP
     instance.stop()
     assert await instance.status() is instance.AiidaLabInstanceStatus.EXITED
