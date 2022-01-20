@@ -4,6 +4,7 @@
 Authors:
     * Carl Simon Adorf <simon.adorf@epfl.ch>
 """
+import asyncio
 import getpass
 import logging
 import socket
@@ -241,7 +242,7 @@ def set_default_profile(app_state, profile):
         click.echo(f"Set default profile to '{profile}'.")
 
 
-def _find_mount_point_conflict(client, profile, other_profiles):
+async def _find_mount_point_conflict(client, profile, other_profiles):
     """Find running instances with the same home mount point.
 
     To protect users from inadvertently starting a second profile with the same
@@ -253,67 +254,31 @@ def _find_mount_point_conflict(client, profile, other_profiles):
             other_profile != profile
             and Path(other_profile.home_mount).resolve()
             == Path(profile.home_mount).resolve()
-            and AiidaLabInstance(client=client, profile=other_profile).status()
-            is not AiidaLabInstance.AiidaLabInstanceStatus.DOWN
         ):
-            yield other_profile
+            status = await AiidaLabInstance(
+                client=client, profile=other_profile
+            ).status()
+            if status is not AiidaLabInstance.AiidaLabInstanceStatus.DOWN:
+                yield other_profile
 
 
-@cli.command()
-@click.option(
-    "--restart",
-    is_flag=True,
-    help="Restart the container in case that it is already running.",
-)
-@click.option(
-    "--wait",
-    default=120,
-    show_default=True,
-    help="Time to wait after startup until all services are up. Set to zero to not wait at all and immediately return.",
-)
-@click.option(
-    "--pull/--no-pull",
-    default=True,
-    help=(
-        "Specify whether to pull the configured image prior to the first start "
-        "of the container."
-    ),
-    show_default=True,
-)
-@click.option(
-    "--no-browser",
-    is_flag=True,
-    help=(
-        "Do not open AiiDAlab in the browser after startup. "
-        "(This is disabled by default if the wait time is set to zero.)"
-    ),
-)
-@click.option(
-    "--show-ssh-port-forwarding-help",
-    "show_ssh_help",
-    is_flag=True,
-    help="Show guidance on SSH port forwarding.",
-)
-@click.option(
-    "-f", "--force", is_flag=True, help="Ignore any warnings and start anyways."
-)
-@pass_app_state
-@with_profile
-def start(app_state, profile, restart, wait, pull, no_browser, show_ssh_help, force):
-    """Start an AiiDAlab instance on this host."""
-
+async def _async_start(
+    app_state, profile, restart, wait, pull, no_browser, show_ssh_help, force
+):
+    # Check for potential mount point conflicts.
     instance = AiidaLabInstance(client=app_state.docker_client, profile=profile)
 
-    # Check for potential mount point conflicts.
     if not force:
+        conflict = False
         with spinner("Check for potential conflicts...", delay=0.1):
-            conflict = any(
-                _find_mount_point_conflict(
-                    app_state.docker_client,
-                    profile,
-                    app_state.config.profiles,
-                )
-            )
+            async for p in _find_mount_point_conflict(
+                app_state.docker_client,
+                profile,
+                app_state.config.profiles,
+            ):
+                conflict = True
+                break
+
         if conflict:
             msg_warn = MSG_MOUNT_POINT_CONFLICT.format(home_mount=profile.home_mount)
             click.confirm(
@@ -355,7 +320,7 @@ def start(app_state, profile, restart, wait, pull, no_browser, show_ssh_help, fo
 
         InstanceStatus = instance.AiidaLabInstanceStatus  # local alias for brevity
 
-        status = instance.status()
+        status = await instance.status()
         if status in (
             InstanceStatus.DOWN,
             InstanceStatus.CREATED,
@@ -412,12 +377,14 @@ def start(app_state, profile, restart, wait, pull, no_browser, show_ssh_help, fo
         if wait:
             try:
                 with spinner("Waiting for AiiDAlab instance to get ready..."):
-                    instance.wait_for_services(timeout=wait)
+                    echo_logs = asyncio.create_task(instance.echo_logs())
+                    await asyncio.wait_for(instance._wait_for_services(), timeout=wait)
+                    echo_logs.cancel()
             except RuntimeError:
                 raise click.ClickException(
                     "The AiiDAlab instance failed to start. Consider to inspect "
                     "the container output logs by increasing the output "
-                    "verbosity with 'aiidalab-launch -v start'."
+                    "verbosity with 'aiidalab-launch -vvv start'."
                 )
             url = instance.url()
             msg_startup = (
@@ -452,6 +419,51 @@ def start(app_state, profile, restart, wait, pull, no_browser, show_ssh_help, fo
 
 @cli.command()
 @click.option(
+    "--restart",
+    is_flag=True,
+    help="Restart the container in case that it is already running.",
+)
+@click.option(
+    "--wait",
+    default=120,
+    show_default=True,
+    help="Time to wait after startup until all services are up. Set to zero to not wait at all and immediately return.",
+)
+@click.option(
+    "--pull/--no-pull",
+    default=True,
+    help=(
+        "Specify whether to pull the configured image prior to the first start "
+        "of the container."
+    ),
+    show_default=True,
+)
+@click.option(
+    "--no-browser",
+    is_flag=True,
+    help=(
+        "Do not open AiiDAlab in the browser after startup. "
+        "(This is disabled by default if the wait time is set to zero.)"
+    ),
+)
+@click.option(
+    "--show-ssh-port-forwarding-help",
+    "show_ssh_help",
+    is_flag=True,
+    help="Show guidance on SSH port forwarding.",
+)
+@click.option(
+    "-f", "--force", is_flag=True, help="Ignore any warnings and start anyways."
+)
+@pass_app_state
+@with_profile
+def start(*args, **kwargs):
+    """Start an AiiDAlab instance on this host."""
+    asyncio.run(_async_start(*args, **kwargs))
+
+
+@cli.command()
+@click.option(
     "-r",
     "--remove",
     is_flag=True,
@@ -469,7 +481,7 @@ def start(app_state, profile, restart, wait, pull, no_browser, show_ssh_help, fo
 def stop(app_state, profile, remove, timeout):
     """Stop an AiiDAlab instance on this host."""
     instance = AiidaLabInstance(client=app_state.docker_client, profile=profile)
-    status = instance.status()
+    status = asyncio.run(instance.status())
     if status not in (
         instance.AiidaLabInstanceStatus.DOWN,
         instance.AiidaLabInstanceStatus.CREATED,
@@ -507,14 +519,17 @@ def status(app_state):
     # Collect status for each profile
     headers = ["Profile", "Container", "Status", "Mount", "URL"]
     rows = []
-    instances = (
+    instances = [
         AiidaLabInstance(client=client, profile=profile)
         for profile in app_state.config.profiles
-    )
+    ]
+
+    async def fetch_status(instances):
+        results = await asyncio.gather(*(instance.status() for instance in instances))
+        return list(zip(instances, results))
 
     with spinner("Collecting status info...", delay=0.5):
-        for instance in instances:
-            instance_status = instance.status()
+        for instance, instance_status in asyncio.run(fetch_status(instances)):
             rows.append(
                 [
                     instance.profile.name,
@@ -559,10 +574,10 @@ def exec(ctx, profile, cmd, privileged, forward_exit_code, wait):
     try:
         if wait:
             with spinner("Waiting for AiiDAlab to get ready...", delay=0.5):
-                instance.wait_for_services(timeout=60)
+                asyncio.run(asyncio.wait_for(instance.wait_for_services(), timeout=60))
         with spinner("Send command to container...", delay=1.0):
             exec_id = instance.exec_create(" ".join(cmd), privileged=privileged)
-    except RuntimeError:
+    except (RuntimeError, asyncio.TimeoutError):
         raise click.ClickException("AiiDAlab instance is not available. Is it running?")
 
     output = app_state.docker_client.api.exec_start(exec_id, stream=True)
