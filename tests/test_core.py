@@ -79,33 +79,33 @@ def test_config_dumps_loads(config):
     assert config == Config.loads(config.dumps())
 
 
-def test_instance_init(instance):
-    assert instance.status() is instance.AiidaLabInstanceStatus.DOWN
+async def test_instance_init(instance):
+    assert await instance.status() is instance.AiidaLabInstanceStatus.DOWN
 
 
 @pytest.mark.trylast
-def test_instance_create_remove(instance):
-    assert instance.status() is instance.AiidaLabInstanceStatus.DOWN
+async def test_instance_create_remove(instance):
+    assert await instance.status() is instance.AiidaLabInstanceStatus.DOWN
     instance.create()
-    assert instance.status() is instance.AiidaLabInstanceStatus.CREATED
+    assert await instance.status() is instance.AiidaLabInstanceStatus.CREATED
     # The instance is automatically stopped and removed by the fixture
     # function.
 
 
 @pytest.mark.slow
 @pytest.mark.trylast
-def test_instance_start_stop(instance):
-    assert instance.status() is instance.AiidaLabInstanceStatus.DOWN
+async def test_instance_start_stop(instance):
+    assert await instance.status() is instance.AiidaLabInstanceStatus.DOWN
     instance.start()
     sleep(0.1)
-    assert instance.status() is instance.AiidaLabInstanceStatus.STARTING
+    assert await instance.status() is instance.AiidaLabInstanceStatus.STARTING
 
     # premature additional start should have no negative effect
     instance.start()
 
     instance.wait_for_services(timeout=300)
-    assert instance.status() is instance.AiidaLabInstanceStatus.UP
+    assert await instance.status() is instance.AiidaLabInstanceStatus.UP
     instance.stop()
-    assert instance.status() is instance.AiidaLabInstanceStatus.EXITED
+    assert await instance.status() is instance.AiidaLabInstanceStatus.EXITED
     instance.remove()
-    assert instance.status() is instance.AiidaLabInstanceStatus.DOWN
+    assert await instance.status() is instance.AiidaLabInstanceStatus.DOWN

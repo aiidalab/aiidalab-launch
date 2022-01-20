@@ -381,12 +381,13 @@ class AiidaLabInstance:
         except asyncio.TimeoutError:
             raise TimeoutError
 
-    def status(self, timeout: Optional[float] = 3.0) -> AiidaLabInstanceStatus:
+    async def status(self, timeout: Optional[float] = 5.0) -> AiidaLabInstanceStatus:
         if self.container:
             self.container.reload()
+            await asyncio.sleep(0)
             if self.container.status == "running":
                 try:
-                    self.wait_for_services(timeout=timeout)
+                    await asyncio.wait_for(self._wait_for_services(), timeout=timeout)
                 except TimeoutError:
                     return self.AiidaLabInstanceStatus.STARTING
                 except RuntimeError:
@@ -415,8 +416,6 @@ class AiidaLabInstance:
         return None
 
     def url(self) -> str:
-        if self.status() is not self.AiidaLabInstanceStatus.UP:
-            raise RuntimeError("Cannot generate url for instance that is not up.")
         host_port = self.host_port()
         jupyter_token = self.jupyter_token()
         return f"http://localhost:{host_port}/?token={jupyter_token}"
