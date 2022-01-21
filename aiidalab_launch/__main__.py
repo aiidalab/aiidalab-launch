@@ -17,7 +17,14 @@ import docker
 from packaging.version import parse
 from tabulate import tabulate
 
-from .core import APPLICATION_ID, LOGGER, AiidaLabInstance, Config, Profile
+from .core import (
+    APPLICATION_ID,
+    DEFAULT_PORT,
+    LOGGER,
+    AiidaLabInstance,
+    Config,
+    Profile,
+)
 from .util import get_docker_client, get_latest_version, spinner, webbrowser_available
 from .version import __version__
 
@@ -168,9 +175,23 @@ def show_profile(app_state, profile):
 
 @profiles.command("add")
 @click.argument("profile")
+@click.option(
+    "--port",
+    type=click.IntRange(min=1, max=65535),
+    help=(
+        "Specify port on which this instance will be exposed. The default port "
+        "is chosen such that it does not conflict with any currently configured "
+        "profiles."
+    ),
+)
+@click.option(
+    "--home-mount",
+    type=click.Path(file_okay=False),
+    help="Specify the path to be mounted as home directory.",
+)
 @pass_app_state
 @click.pass_context
-def add_profile(ctx, app_state, profile):
+def add_profile(ctx, app_state, port, home_mount, profile):
     """Add a new AiiDAlab profile to the configuration."""
     try:
         app_state.config.get_profile(profile)
@@ -179,8 +200,18 @@ def add_profile(ctx, app_state, profile):
     else:
         raise click.ClickException(f"Profile with name '{profile}' already exists.")
 
+    # Determine next available port or use the one provided by the user.
+    configured_ports = [prof.port for prof in app_state.config.profiles if prof.port]
+    port = port or (max(configured_ports, default=-1) + 1) or DEFAULT_PORT
+    # Determine home mount path unless provided.
+    home_mount = home_mount or str(Path.home() / f"aiidalab-{profile}")
+
     try:
-        new_profile = Profile(name=profile)
+        new_profile = Profile(
+            name=profile,
+            port=port,
+            home_mount=home_mount,
+        )
     except ValueError as error:  # invalid profile name
         raise click.ClickException(error)
 
