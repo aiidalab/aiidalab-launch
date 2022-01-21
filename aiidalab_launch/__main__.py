@@ -401,10 +401,6 @@ async def _async_start(
         elif status is InstanceStatus.STARTING:
             click.echo("Container is already starting up...", err=True)
 
-    except TimeoutError:
-        raise click.ClickException(
-            f"AiiDAlab instance did not start up within the provided wait period ({wait})."
-        )
     except docker.errors.APIError as error:
         LOGGER.debug(f"Error during startup: {error}")
         if instance.profile.port and "port is already allocated" in str(error):
@@ -413,7 +409,7 @@ async def _async_start(
                 f"for example, by editing the profile: aiidalab-launch profiles edit {instance.profile.name}"
             )
         raise click.ClickException("Startup failed due to an unexpected error.")
-    except TimeoutError:
+    except asyncio.TimeoutError:
         raise click.ClickException(
             "AiiDAlab instance did not start up within the excepted wait period."
         )
@@ -426,6 +422,10 @@ async def _async_start(
                     echo_logs = asyncio.create_task(instance.echo_logs())
                     await asyncio.wait_for(instance.wait_for_services(), timeout=wait)
                     echo_logs.cancel()
+            except asyncio.TimeoutError:
+                raise click.ClickException(
+                    f"AiiDAlab instance did not start up within the provided wait period ({wait})."
+                )
             except RuntimeError:
                 raise click.ClickException(
                     "The AiiDAlab instance failed to start. Consider to inspect "
