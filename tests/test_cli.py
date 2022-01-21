@@ -54,7 +54,10 @@ def test_show_profile():
 
 def test_add_remove_profile():
     runner: CliRunner = CliRunner()
-    result: Result = runner.invoke(cli.cli, ["profiles", "add", "new-profile"])
+    result: Result = runner.invoke(
+        cli.cli, ["profiles", "add", "new-profile"], input="n\n"
+    )
+    assert result.exit_code == 0
     assert "Added profile 'new-profile'." in result.output
     result: Result = runner.invoke(cli.cli, ["profiles", "list"])
     assert "new-profile" in result.output
