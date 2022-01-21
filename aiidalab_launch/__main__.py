@@ -194,14 +194,29 @@ def add_profile(ctx, app_state, profile):
 @profiles.command("remove")
 @click.argument("profile")
 @click.option("--yes", is_flag=True, help="Do not ask for confirmation.")
+@click.option("-f", "--force", is_flag=True, help="Proceed, ignoring any warnings.")
 @pass_app_state
-def remove_profile(app_state, profile, yes):
+def remove_profile(app_state, profile, yes, force):
     """Remove a AiiDAlab profile from the configuration."""
     try:
         profile = app_state.config.get_profile(profile)
     except ValueError:
         raise click.ClickException(f"Profile with name '{profile}' does not exist.")
     else:
+        if not force:
+            instance = AiidaLabInstance(client=app_state.docker_client, profile=profile)
+            status = asyncio.run(instance.status())
+            if status not in (
+                instance.AiidaLabInstanceStatus.DOWN,
+                instance.AiidaLabInstanceStatus.CREATED,
+                instance.AiidaLabInstanceStatus.EXITED,
+            ):
+                raise click.ClickException(
+                    f"The instance associated with profile '{profile.name}' "
+                    "is still running. Use the -f/--force option to remove the "
+                    "profile anyways."
+                )
+
         if yes or click.confirm(
             f"Are you sure you want to remove profile '{profile.name}'?"
         ):
