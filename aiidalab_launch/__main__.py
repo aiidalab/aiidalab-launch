@@ -432,15 +432,15 @@ async def _async_start(
                     "the container output logs by increasing the output "
                     "verbosity with 'aiidalab-launch -vvv start'."
                 )
-            url = instance.url()
             msg_startup = (
                 MSG_STARTUP_SSH
                 if (show_ssh_help or not webbrowser_available())
                 else MSG_STARTUP
             )
+            url = instance.url()
             click.secho(
                 msg_startup.format(
-                    url=instance.url(),
+                    url=url,
                     home_mount=instance.profile.home_mount,
                     system_user=instance.profile.system_user,
                     user=getpass.getuser(),

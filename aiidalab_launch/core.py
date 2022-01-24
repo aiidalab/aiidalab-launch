@@ -389,20 +389,27 @@ class AiidaLabInstance:
 
     def jupyter_token(self) -> Optional[str]:
         if self.container:
-            result = self.container.exec_run("/bin/sh -c 'echo $JUPYTER_TOKEN'")
-            if result.exit_code == 0:
-                return result.output.decode().strip()
+            try:
+                re_token = r"JUPYTER_TOKEN=(?P<token>[a-z0-9]{64})"
+                for item in self.container.attrs["Config"]["Env"]:
+                    match = re.match(re_token, item)
+                    if match:
+                        return match.groupdict()["token"]
+            except (KeyError, IndexError):
+                pass
         return None
 
     def host_port(self) -> Optional[int]:
         if self.container:
             try:
-                return self.container.ports["8888/tcp"][0]["HostPort"]
+                host_config = self.container.attrs["HostConfig"]
+                return host_config["PortBindings"]["8888/tcp"][0]["HostPort"]
             except (KeyError, IndexError):
                 pass
         return None
 
     def url(self) -> str:
+        assert self.container is not None
         host_port = self.host_port()
         jupyter_token = self.jupyter_token()
         return f"http://localhost:{host_port}/?token={jupyter_token}"
