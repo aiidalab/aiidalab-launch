@@ -147,3 +147,12 @@ def get_latest_version(timeout: float = 0.1) -> Optional[Version]:
     except OSError as error:
         logging.debug(f"Error while requesting latest version: {error}")
         return None
+
+
+def confirm_with_value(value: str, text: str, abort: bool = False) -> bool:
+    if click.prompt(text, default="", show_default=False) == value:
+        return True
+    elif abort:
+        raise click.Abort
+    else:
+        return False

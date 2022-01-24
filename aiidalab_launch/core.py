@@ -279,15 +279,10 @@ class AiidaLabInstance:
             raise RuntimeError("no container")
 
     def remove(self) -> None:
-        self._requires_container()
-        assert self.container is not None
-
         # Remove container
-        try:
+        if self.container:
             self.container.remove()
             self._container = None
-        except AttributeError:
-            raise RuntimeError("no container")
 
         # Remove conda volume
         try:
