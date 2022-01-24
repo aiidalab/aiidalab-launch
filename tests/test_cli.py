@@ -84,6 +84,14 @@ def test_add_remove_profile():
     assert "new-profile" not in result.output
 
 
+def test_add_profile_invalid_name():
+    runner: CliRunner = CliRunner()
+    # underscores are not allowed
+    result: Result = runner.invoke(cli.cli, ["profiles", "add", "new_profile"])
+    assert result.exit_code == 1
+    assert "Invalid profile name 'new_profile'." in result.output
+
+
 @pytest.mark.slow
 @pytest.mark.trylast
 def test_start_stop(instance):
