@@ -51,8 +51,8 @@ jobs:
                   pytest --cov=aiidalab_launch -v
                   #pytest --cov=aiidalab_launch -v --slow
 
-            #- name: Upload coverage to Codecov
-            #  uses: codecov/codecov-action@v2
+            - name: Upload coverage to Codecov
+              uses: codecov/codecov-action@v2
 
     test-installation-with-pipx:
 
