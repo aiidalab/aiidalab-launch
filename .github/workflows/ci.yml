@@ -47,7 +47,12 @@ jobs:
                   python -m pip freeze
 
             - name: Run tests
-              run: python -m pytest -v --slow
+              run: |
+                  pytest --cov=aiidalab_launch -v --slow
+                  coverage json
+
+            - name: Upload coverage to Codecov
+              uses: codecov/codecov-action@v2
 
     test-installation-with-pipx:
 
