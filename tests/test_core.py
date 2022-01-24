@@ -6,14 +6,12 @@
 .. moduleauthor:: Carl Simon Adorf <simon.adorf@epfl.ch>
 """
 import asyncio
-import sys
 from dataclasses import replace
 from time import sleep
 
-import docker
 import pytest
 
-from aiidalab_launch.core import AiidaLabInstance, Config, Profile
+from aiidalab_launch.core import Config, Profile
 
 VALID_PROFILE_NAMES = ["abc", "Abc", "aBC", "a0", "a-a", "a-0"]
 
@@ -21,26 +19,8 @@ INVALID_PROFILE_NAMES = ["", ".a", "a_a", "_a"]
 
 
 @pytest.fixture
-def profile():
-    return Profile()
-
-
-@pytest.fixture
 def config():
     return Config()
-
-
-@pytest.fixture
-def instance(docker_client, profile):
-    instance = AiidaLabInstance(client=docker_client, profile=profile)
-    yield instance
-    try:
-        instance.stop()
-        instance.remove()
-    except (RuntimeError, docker.errors.NotFound):
-        pass
-    except docker.errors.APIError as error:
-        print(f"WARNING: Issue while removing instance: {error}", file=sys.stderr)
 
 
 def test_profile_init(profile):

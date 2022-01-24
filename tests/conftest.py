@@ -9,12 +9,14 @@ Provide fixtures for all tests.
 """
 import random
 import string
+import sys
 
 import click
 import docker
 import pytest
 
 import aiidalab_launch
+from aiidalab_launch.core import AiidaLabInstance, Profile
 
 
 @pytest.fixture
@@ -57,6 +59,24 @@ def docker_client():
         yield docker.from_env()
     except docker.errors.DockerException:
         pytest.skip("docker not available")
+
+
+@pytest.fixture
+def profile():
+    return Profile()
+
+
+@pytest.fixture
+def instance(docker_client, profile):
+    instance = AiidaLabInstance(client=docker_client, profile=profile)
+    yield instance
+    try:
+        instance.stop()
+        instance.remove()
+    except (RuntimeError, docker.errors.NotFound):
+        pass
+    except docker.errors.APIError as error:
+        print(f"WARNING: Issue while removing instance: {error}", file=sys.stderr)
 
 
 def pytest_addoption(parser):
