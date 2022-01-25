@@ -693,7 +693,7 @@ def reset(app_state, profile, apps, yes):
         click.echo(
             "Removing apps directory. Default apps will be installed on next start."
         )
-        rmtree_(Path(profile.home_dir) / "apps")
+        rmtree_(Path(profile.home_mount) / "apps")
     else:
         click.echo("Removing container and associated volumes.")
         instance.remove()
