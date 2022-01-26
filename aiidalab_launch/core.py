@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # __future__ import needed for classmethod factory functions; should be dropped
 # with py 3.10.
 from __future__ import annotations
@@ -11,7 +10,7 @@ from dataclasses import asdict, dataclass, field
 from enum import Enum, auto
 from pathlib import Path
 from secrets import token_hex
-from typing import Any, AsyncGenerator, Generator, List, Optional, Union
+from typing import Any, AsyncGenerator, Generator
 from urllib.parse import quote_plus
 from uuid import uuid4
 
@@ -48,11 +47,11 @@ def _default_port() -> int:  # explicit function required to enable test patchin
 @dataclass
 class Profile:
     name: str = MAIN_PROFILE_NAME
-    port: Optional[int] = field(default_factory=_default_port)
-    default_apps: List[str] = field(default_factory=lambda: ["aiidalab-widgets-base"])
+    port: int | None = field(default_factory=_default_port)
+    default_apps: list[str] = field(default_factory=lambda: ["aiidalab-widgets-base"])
     system_user: str = "aiida"
     image: str = "aiidalab/aiidalab-docker-stack:latest"
-    home_mount: Optional[str] = field(default_factory=lambda: _default_home_mount())
+    home_mount: str | None = field(default_factory=lambda: _default_home_mount())
 
     def __post_init__(self):
         if (
@@ -88,7 +87,7 @@ class Profile:
 
 @dataclass
 class Config:
-    profiles: List[Profile] = field(default_factory=lambda: [Profile()])
+    profiles: list[Profile] = field(default_factory=lambda: [Profile()])
     default_profile: str = MAIN_PROFILE_NAME
 
     @classmethod
@@ -157,13 +156,13 @@ class AiidaLabInstance:
     _image: docker.models.images.Image = None
     _container: docker.models.containers.Container = None
 
-    def _get_image(self) -> Optional[docker.models.images.Image]:
+    def _get_image(self) -> docker.models.images.Image | None:
         try:
             return self.client.images.get(self.profile.image)
         except docker.errors.ImageNotFound:
             return None
 
-    def _get_container(self) -> Optional[docker.models.containers.Container]:
+    def _get_container(self) -> docker.models.containers.Container | None:
         try:
             return self.client.containers.get(self.profile.container_name())
         except docker.errors.NotFound:
@@ -174,11 +173,11 @@ class AiidaLabInstance:
         self._container = self._get_container()
 
     @property
-    def image(self) -> Optional[docker.models.images.Image]:
+    def image(self) -> docker.models.images.Image | None:
         return self._image
 
     @property
-    def container(self) -> Optional[docker.models.containers.Container]:
+    def container(self) -> docker.models.containers.Container | None:
         return self._container
 
     def _requires_container(self) -> None:
@@ -270,7 +269,7 @@ class AiidaLabInstance:
                 "Failed to ensure ~/.conda directory is owned by the system user."
             )
 
-    def stop(self, timeout: Optional[float] = None) -> None:
+    def stop(self, timeout: float | None = None) -> None:
         self._requires_container()
         assert self.container is not None
         try:
@@ -296,7 +295,7 @@ class AiidaLabInstance:
 
     def logs(
         self, stream: bool = False, follow: bool = False
-    ) -> Union[docker.types.daemon.CancellableStream, str]:
+    ) -> docker.types.daemon.CancellableStream | str:
         if self.container is None:
             raise RuntimeError("Instance was not created.")
         return self.container.logs(stream=stream, follow=follow)
@@ -363,7 +362,7 @@ class AiidaLabInstance:
             self._init_scripts_finished(), self._notebook_service_online()
         )
 
-    async def status(self, timeout: Optional[float] = 5.0) -> AiidaLabInstanceStatus:
+    async def status(self, timeout: float | None = 5.0) -> AiidaLabInstanceStatus:
         if self.container:
             self.container.reload()
             await asyncio.sleep(0)
@@ -382,7 +381,7 @@ class AiidaLabInstance:
                 return self.AiidaLabInstanceStatus.EXITED
         return self.AiidaLabInstanceStatus.DOWN
 
-    def jupyter_token(self) -> Optional[str]:
+    def jupyter_token(self) -> str | None:
         if self.container:
             try:
                 re_token = r"JUPYTER_TOKEN=(?P<token>[a-z0-9]{64})"
@@ -394,7 +393,7 @@ class AiidaLabInstance:
                 pass
         return None
 
-    def host_port(self) -> Optional[int]:
+    def host_port(self) -> int | None:
         if self.container:
             try:
                 host_config = self.container.attrs["HostConfig"]

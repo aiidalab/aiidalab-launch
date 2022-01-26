@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 import asyncio
 import logging
 import webbrowser
@@ -133,11 +132,11 @@ def get_latest_version(timeout: float = 0.1) -> Optional[Version]:
         )
         req.raise_for_status()
         releases = sorted(
-            [
+            (
                 version
                 for version, release in req.json()["releases"].items()
                 if not all(r["yanked"] for r in release)
-            ],
+            ),
             key=parse,
         )
         return parse(releases[-1]) if releases else None
