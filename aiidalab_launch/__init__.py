@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 """
 Helper script to launch AiiDAlab on a local workstation.
 
