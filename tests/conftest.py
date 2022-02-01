@@ -15,7 +15,12 @@ import docker
 import pytest
 
 import aiidalab_launch
-from aiidalab_launch.core import AiidaLabInstance, Config, Profile
+from aiidalab_launch.core import (
+    AiidaLabInstance,
+    Config,
+    Profile,
+    RequiresContainerInstance,
+)
 
 
 @pytest.fixture
@@ -74,13 +79,16 @@ def docker_client():
 def instance(docker_client, profile):
     instance = AiidaLabInstance(client=docker_client, profile=profile)
     yield instance
-    try:
-        instance.stop()
-        instance.remove()
-    except (RuntimeError, docker.errors.NotFound):
-        pass
-    except docker.errors.APIError as error:
-        print(f"WARNING: Issue while removing instance: {error}", file=sys.stderr)
+    for op in (instance.stop, instance.remove):
+        try:
+            op()
+        except (docker.errors.NotFound, RequiresContainerInstance):
+            continue
+        except (RuntimeError, docker.errors.APIError) as error:
+            print(
+                f"WARNING: Issue while stopping/removing instance: {error}",
+                file=sys.stderr,
+            )
 
 
 def pytest_addoption(parser):

@@ -130,6 +130,10 @@ class FailedToWaitForServices(RuntimeError):
     pass
 
 
+class RequiresContainerInstance(RuntimeError):
+    """Raised when trying to perform operation that requires a container instance."""
+
+
 @contextmanager
 def _async_logs(
     container: docker.models.containers.Container,
@@ -178,11 +182,13 @@ class AiidaLabInstance:
 
     @property
     def container(self) -> docker.models.containers.Container | None:
+        if self._container is None:
+            self._container = self._get_container()
         return self._container
 
     def _requires_container(self) -> None:
         if self.container is None:
-            raise RuntimeError("This function requires a container instance.")
+            raise RequiresContainerInstance
 
     def _conda_mount(self) -> docker.types.Mount:
         return docker.types.Mount(
