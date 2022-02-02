@@ -1,5 +1,6 @@
 *.egg-info
 *.swp
+.coverage
 __pycache__/
 build/
 dist/
