@@ -67,6 +67,8 @@ class Profile:
                 "composed of the following characters [a-zA-Z0-9.-] and must "
                 "start with an alphanumeric character."
             )
+        if self.home_mount is None:
+            self.home_mount = f"aiidalab_{self.name}_home"
 
     def container_name(self) -> str:
         return f"{CONTAINER_PREFIX}{self.name}"
@@ -203,10 +205,11 @@ class AiidaLabInstance:
 
     def _home_mount(self) -> docker.types.Mount:
         assert self.profile.home_mount is not None
+        home_mount_path = Path(self.profile.home_mount)
         return docker.types.Mount(
             target=f"/home/{self.profile.system_user}",
             source=self.profile.home_mount,
-            type="bind",
+            type="bind" if home_mount_path.is_absolute() else "volume",
         )
 
     def _mounts(self) -> Generator[docker.types.Mount, None, None]:
@@ -237,8 +240,12 @@ class AiidaLabInstance:
 
     def _ensure_home_mount_exists(self) -> None:
         if self.profile.home_mount:
-            LOGGER.info(f"Ensure home mount point ({self.profile.home_mount}) exists.")
-            Path(self.profile.home_mount).mkdir(exist_ok=True)
+            home_mount_path = Path(self.profile.home_mount)
+            if home_mount_path.is_absolute():
+                LOGGER.info(
+                    f"Ensure home mount point ({self.profile.home_mount}) exists."
+                )
+                home_mount_path.mkdir(exist_ok=True)
 
     def create(self) -> docker.models.containers.Container:
         assert self._container is None
