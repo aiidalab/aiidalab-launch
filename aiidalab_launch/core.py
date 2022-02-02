@@ -16,8 +16,10 @@ from uuid import uuid4
 
 import docker
 import toml
+from packaging.version import parse as parse_version
 
 from .util import _async_wrap_iter
+from .version import __version__
 
 MAIN_PROFILE_NAME = "default"
 
@@ -26,6 +28,8 @@ CONTAINER_PREFIX = "aiidalab_"
 DEFAULT_PORT = 8888
 
 APPLICATION_ID = "org.aiidalab.aiidalab_launch"
+
+CONFIG_VERSION = parse_version(__version__).base_version
 
 LOGGER = logging.getLogger(APPLICATION_ID.split(".")[-1])
 
@@ -89,6 +93,7 @@ class Profile:
 class Config:
     profiles: list[Profile] = field(default_factory=lambda: [Profile()])
     default_profile: str = MAIN_PROFILE_NAME
+    version: str = CONFIG_VERSION
 
     @classmethod
     def loads(cls, blob: str) -> Config:

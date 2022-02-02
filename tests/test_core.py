@@ -9,8 +9,10 @@ from dataclasses import replace
 from time import sleep
 
 import pytest
+from packaging.version import parse as parse_version
 
 from aiidalab_launch.core import Config, Profile
+from aiidalab_launch.version import __version__
 
 VALID_PROFILE_NAMES = ["abc", "Abc", "aBC", "a0", "a-a", "a-0"]
 
@@ -52,6 +54,10 @@ def test_config_equality(config):
 
 def test_config_dumps_loads(config):
     assert config == Config.loads(config.dumps())
+
+
+def test_config_version(config):
+    assert config.version == parse_version(__version__).base_version
 
 
 async def test_instance_init(instance):
