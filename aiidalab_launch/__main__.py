@@ -91,6 +91,47 @@ class ApplicationState:
     config: Config = field(default_factory=_load_config)
     docker_client: docker.DockerClient = field(default_factory=get_docker_client)
 
+    def _apply_migration_null(self):
+        # Since there is no config file on disk, we can assume that if at all,
+        # there is only the default profile present.
+        assert len(self.config.profiles) == 1
+        assert self.config.profiles[0].name == "default"
+
+        default_profile = self.config.profiles[0]
+        instance = AiidaLabInstance(client=self.docker_client, profile=default_profile)
+        if instance.container:
+            raise NotImplementedError()
+            # check the currently used mount point
+        else:
+            home_bind_mount_path = Path.home().joinpath("aiidalab")
+            if home_bind_mount_path.exists():
+                msg_confirm_use_of_bind_mount = (
+                    "The default home directory mount was changed after version "
+                    "2022.1011 to be a Docker volume instead of a bind mount. "
+                    "However, it appears that you used AiiDAlab launch before "
+                    f"and used mount directory {home_bind_mount_path} instead. "
+                    "Would you prefer to maintain the previous behavior and use "
+                    "that directory instead? (Select yes if you are unsure.)"
+                )
+                if click.confirm(
+                    click.style(
+                        "\n".join(wrap(msg_confirm_use_of_bind_mount)),
+                        fg="yellow",
+                    ),
+                    default=True,
+                ):
+                    # Use previous mount point by default.
+                    self.config.profiles[0].home_mount = str(
+                        Path.home().joinpath("aiidalab")
+                    )
+
+        self.config.version = str(parse(__version__))
+        self.config.save(_application_config_path())
+
+    def apply_migrations(self):
+        if self.config.version is None:
+            self._apply_migration_null()  # no config file on disk
+
 
 pass_app_state = click.make_pass_decorator(ApplicationState, ensure=True)
 
@@ -114,7 +155,8 @@ def with_profile(cmd):
     count=True,
     help="Provide this option to increase the output verbosity of the launcher.",
 )
-def cli(verbose):
+@pass_app_state
+def cli(app_state, verbose):
     # Use the verbosity count to determine the logging level...
     logging.basicConfig(
         level=LOGGING_LEVELS[verbose] if verbose in LOGGING_LEVELS else logging.DEBUG
@@ -137,6 +179,9 @@ def cli(verbose):
         )
         if "pipx" in __file__:
             click.secho("Run `pipx upgrade aiidalab-launch` to update.", fg="yellow")
+
+    # Apply migrations
+    app_state.apply_migrations()
 
 
 @cli.command()

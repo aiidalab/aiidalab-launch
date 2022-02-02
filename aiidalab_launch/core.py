@@ -55,7 +55,7 @@ class Profile:
     default_apps: list[str] = field(default_factory=lambda: ["aiidalab-widgets-base"])
     system_user: str = "aiida"
     image: str = "aiidalab/aiidalab-docker-stack:latest"
-    home_mount: str | None = field(default_factory=lambda: _default_home_mount())
+    home_mount: str | None = None
 
     def __post_init__(self):
         if (
@@ -67,6 +67,9 @@ class Profile:
                 "composed of the following characters [a-zA-Z0-9.-] and must "
                 "start with an alphanumeric character."
             )
+        if self.home_mount is None:
+            self.home_mount = f"aiidalab_{self.name}_home"
+
         if self.home_mount is None:
             self.home_mount = f"aiidalab_{self.name}_home"
 
@@ -95,7 +98,11 @@ class Profile:
 class Config:
     profiles: list[Profile] = field(default_factory=lambda: [Profile()])
     default_profile: str = MAIN_PROFILE_NAME
-    version: str = CONFIG_VERSION
+
+    # The configuration is always stored to disk beginning with version
+    # 2022.1012, which means we assume that if no configuration is stored
+    # we cannot make any assumptions about the latest applicable version.
+    version: str | None = None
 
     @classmethod
     def loads(cls, blob: str) -> Config:
