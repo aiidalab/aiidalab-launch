@@ -8,7 +8,7 @@ import re
 from contextlib import contextmanager
 from dataclasses import asdict, dataclass, field
 from enum import Enum, auto
-from pathlib import Path
+from pathlib import Path, PosixPath, PurePosixPath, WindowsPath
 from secrets import token_hex
 from typing import Any, AsyncGenerator, Generator
 from urllib.parse import quote_plus
@@ -18,7 +18,7 @@ import docker
 import toml
 from packaging.version import parse as parse_version
 
-from .util import _async_wrap_iter
+from .util import _async_wrap_iter, get_docker_env
 from .version import __version__
 
 MAIN_PROFILE_NAME = "default"
@@ -40,10 +40,6 @@ LOGGER = logging.getLogger(APPLICATION_ID.split(".")[-1])
 _REGEX_VALID_PROFILE_NAMES = r"[a-zA-Z0-9][a-zA-Z0-9.-]+"
 
 
-def _default_home_mount() -> str:
-    return str(Path.home().joinpath("aiidalab"))
-
-
 def _default_port() -> int:  # explicit function required to enable test patching
     return DEFAULT_PORT
 
@@ -55,7 +51,7 @@ class Profile:
     default_apps: list[str] = field(default_factory=lambda: ["aiidalab-widgets-base"])
     system_user: str = "aiida"
     image: str = "aiidalab/aiidalab-docker-stack:latest"
-    home_mount: str | None = field(default_factory=lambda: _default_home_mount())
+    home_mount: str | None = None
 
     def __post_init__(self):
         if (
@@ -68,7 +64,7 @@ class Profile:
                 "start with an alphanumeric character."
             )
         if self.home_mount is None:
-            self.home_mount = f"aiidalab_{self.name}_home"
+            self.home_mount = f"{CONTAINER_PREFIX}{self.name}_home"
 
     def container_name(self) -> str:
         return f"{CONTAINER_PREFIX}{self.name}"
@@ -95,7 +91,11 @@ class Profile:
 class Config:
     profiles: list[Profile] = field(default_factory=lambda: [Profile()])
     default_profile: str = MAIN_PROFILE_NAME
-    version: str = CONFIG_VERSION
+
+    # The configuration is always stored to disk beginning with version
+    # 2022.1012, which means we assume that if no configuration is stored
+    # we cannot make any assumptions about the latest applicable version.
+    version: str | None = None
 
     @classmethod
     def loads(cls, blob: str) -> Config:
@@ -216,6 +216,48 @@ class AiidaLabInstance:
         yield self._conda_mount()
         if self.profile.home_mount:
             yield self._home_mount()
+
+    def _find_docker_home_mount(
+        self, container: docker.models.containers.Container
+    ) -> Path | None:
+        # Find the specified home bind mount path for the existing container.
+        try:
+            home_mount = [
+                mount
+                for mount in container.attrs["Mounts"]
+                if mount["Destination"] == f"/home/{self.profile.system_user}"
+            ][0]
+        except IndexError:
+            return None
+        if home_mount["Type"] == "bind":
+            docker_root = PurePosixPath("/host_mnt")
+            docker_path = PurePosixPath(home_mount["Source"])
+            try:
+                # Try Windows
+                drive = docker_path.relative_to(docker_root).parts[0]
+                return WindowsPath(
+                    f"{drive}:",
+                    docker_path.root,
+                    docker_path.relative_to(docker_root, drive),
+                )
+            except NotImplementedError:
+                return PosixPath(docker_root.root, docker_path.relative_to(docker_root))
+        elif home_mount["Type"] == "volume":
+            return home_mount["Name"]
+        else:
+            raise RuntimeError("Unexpected mount type.")
+
+    def profile_from_container(
+        self, container: docker.models.containers.Container
+    ) -> Profile:
+        return Profile(
+            name=self.profile.name,
+            port=self.host_port(container),
+            default_apps=self._aiidalab_default_apps(container),
+            home_mount=str(self._find_docker_home_mount(container)),
+            image=container.image.tags[0],
+            system_user=self._system_user(container),
+        )
 
     def configuration_changes(self) -> Generator[str, None, None]:
         assert self.container is not None
@@ -399,29 +441,38 @@ class AiidaLabInstance:
                 return self.AiidaLabInstanceStatus.EXITED
         return self.AiidaLabInstanceStatus.DOWN
 
+    @staticmethod
+    def _aiidalab_default_apps(
+        container: docker.models.containers.Container,
+    ) -> list:
+        try:
+            return get_docker_env(container, "AIIDALAB_DEFAULT_APPS").split()
+        except KeyError:
+            return []
+
+    @staticmethod
+    def _system_user(container: docker.models.containers.Container) -> str:
+        return get_docker_env(container, "SYSTEM_USER")
+
     def jupyter_token(self) -> str | None:
         if self.container:
             try:
-                re_token = r"JUPYTER_TOKEN=(?P<token>[a-z0-9]{64})"
-                for item in self.container.attrs["Config"]["Env"]:
-                    match = re.match(re_token, item)
-                    if match:
-                        return match.groupdict()["token"]
-            except (KeyError, IndexError):
+                return get_docker_env(self.container, "JUPYTER_TOKEN")
+            except KeyError:
                 pass
         return None
 
-    def host_port(self) -> int | None:
-        if self.container:
-            try:
-                host_config = self.container.attrs["HostConfig"]
-                return host_config["PortBindings"]["8888/tcp"][0]["HostPort"]
-            except (KeyError, IndexError):
-                pass
+    @staticmethod
+    def host_port(container: docker.models.containers.Container) -> int | None:
+        try:
+            host_config = container.attrs["HostConfig"]
+            return int(host_config["PortBindings"]["8888/tcp"][0]["HostPort"])
+        except (KeyError, IndexError, ValueError):
+            pass
         return None
 
     def url(self) -> str:
         assert self.container is not None
-        host_port = self.host_port()
+        host_port = self.host_port(self.container)
         jupyter_token = self.jupyter_token()
         return f"http://localhost:{host_port}/?token={jupyter_token}"

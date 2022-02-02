@@ -1,7 +1,9 @@
 import asyncio
 import logging
+import re
 import webbrowser
 from contextlib import contextmanager
+from pathlib import Path, PurePosixPath
 from textwrap import wrap
 from threading import Event, Thread, Timer
 from typing import Any, AsyncGenerator, Generator, Iterable, Optional
@@ -155,3 +157,22 @@ def confirm_with_value(value: str, text: str, abort: bool = False) -> bool:
         raise click.Abort
     else:
         return False
+
+
+def docker_bind_mount_path(path: Path) -> PurePosixPath:
+    "Construct the expected docker bind mount path (platform independent)."
+    return PurePosixPath(
+        "/host_mnt/", path.drive.strip(":"), path.relative_to(path.drive, path.root)
+    )
+
+
+def get_docker_env(container: docker.models.containers.Container, env_name: str) -> str:
+    re_pattern = f"{re.escape(env_name)}=(?P<value>.*)"
+    try:
+        for item in container.attrs["Config"]["Env"]:
+            match = re.search(re_pattern, item)
+            if match:
+                return match.groupdict()["value"]
+    except KeyError:
+        pass
+    raise KeyError(env_name)
