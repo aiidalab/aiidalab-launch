@@ -105,9 +105,7 @@ class ApplicationState:
 
         if instance.container:
             # There is already a container present, use previously used profile.
-            self.config.profiles[0] = instance.profile_from_container(
-                instance.container
-            )
+            self.config.profiles[0] = Profile.from_container(instance.container)
 
         elif home_bind_mount_path.exists():
             # Using ~/aiidalab as home directory mount point, since the
