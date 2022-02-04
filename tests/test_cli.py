@@ -40,19 +40,19 @@ def test_version_displays_expected_message():
     assert "AiiDAlab Launch" in result.output.strip()
 
 
-def test_list_profiles():
+def test_list_profiles(docker_client):
     runner: CliRunner = CliRunner()
     result: Result = runner.invoke(cli.cli, ["profiles", "list"])
     assert "default" in result.output.strip()
 
 
-def test_show_profile():
+def test_show_profile(docker_client):
     runner: CliRunner = CliRunner()
     result: Result = runner.invoke(cli.cli, ["profiles", "show", "default"])
     assert Profile.loads("default", result.output) == Profile()
 
 
-def test_add_remove_profile():
+def test_add_remove_profile(docker_client):
     runner: CliRunner = CliRunner()
     result: Result = runner.invoke(
         cli.cli, ["profiles", "add", "new-profile"], input="n\n"
