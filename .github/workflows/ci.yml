@@ -50,8 +50,8 @@ jobs:
 
             - name: Run tests
               run: |
-                  pytest --cov=aiidalab_launch -v --slow
-                  coverage json
+                  python -m pytest --cov=aiidalab_launch -v --slow
+                  python -m coverage json
 
             - name: Upload coverage to Codecov
               uses: codecov/codecov-action@v2
