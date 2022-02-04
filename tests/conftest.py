@@ -9,6 +9,7 @@ Provide fixtures for all tests.
 import random
 import string
 import sys
+from pathlib import Path
 
 import click
 import docker
@@ -44,17 +45,15 @@ def app_config(tmp_path, monkeypatch):
 
 
 @pytest.fixture(autouse=True)
-def default_home_mount(tmp_path, monkeypatch):
-    home_mount = str(tmp_path.joinpath("home"))
-    monkeypatch.setattr(aiidalab_launch.core, "_default_home_mount", lambda: home_mount)
-    yield home_mount
-
-
-@pytest.fixture(autouse=True)
 def container_prefix(random_token, monkeypatch):
     container_prefix = f"aiidalab-launch_tests_{random_token}_"
     monkeypatch.setattr(aiidalab_launch.core, "CONTAINER_PREFIX", container_prefix)
     yield container_prefix
+
+
+@pytest.fixture(autouse=True)
+def home_path(tmp_path, monkeypatch):
+    monkeypatch.setattr(Path, "home", lambda: tmp_path.joinpath("home"))
 
 
 @pytest.fixture

@@ -91,6 +91,36 @@ class ApplicationState:
     config: Config = field(default_factory=_load_config)
     docker_client: docker.DockerClient = field(default_factory=get_docker_client)
 
+    def _apply_migration_null(self):
+        # Since there is no config file on disk, we can assume that if at all,
+        # there is only the default profile present.
+        assert len(self.config.profiles) == 1
+        assert self.config.profiles[0].name == "default"
+
+        default_profile = self.config.profiles[0]
+        instance = AiidaLabInstance(client=self.docker_client, profile=default_profile)
+
+        # Default home bind mount path up until version 2022.1011.
+        home_bind_mount_path = Path.home() / "aiidalab"
+
+        if instance.container:
+            # There is already a container present, use previously used profile.
+            self.config.profiles[0] = Profile.from_container(instance.container)
+
+        elif home_bind_mount_path.exists():
+            # Using ~/aiidalab as home directory mount point, since the
+            # directory exists. The default mount point was changed to be a
+            # docker volume after version 2022.1011 to address issue
+            # https://github.com/aiidalab/aiidalab-launch/issues/72.
+            self.config.profiles[0].home_mount = str(home_bind_mount_path)
+
+        self.config.version = str(parse(__version__))
+        self.config.save(_application_config_path())
+
+    def apply_migrations(self):
+        if self.config.version is None:
+            self._apply_migration_null()  # no config file saved to disk
+
 
 pass_app_state = click.make_pass_decorator(ApplicationState, ensure=True)
 
@@ -114,7 +144,8 @@ def with_profile(cmd):
     count=True,
     help="Provide this option to increase the output verbosity of the launcher.",
 )
-def cli(verbose):
+@pass_app_state
+def cli(app_state, verbose):
     # Use the verbosity count to determine the logging level...
     logging.basicConfig(
         level=LOGGING_LEVELS[verbose] if verbose in LOGGING_LEVELS else logging.DEBUG
@@ -137,6 +168,9 @@ def cli(verbose):
         )
         if "pipx" in __file__:
             click.secho("Run `pipx upgrade aiidalab-launch` to update.", fg="yellow")
+
+    # Apply migrations
+    app_state.apply_migrations()
 
 
 @cli.command()
@@ -210,8 +244,6 @@ def add_profile(ctx, app_state, port, home_mount, profile):
     # Determine next available port or use the one provided by the user.
     configured_ports = [prof.port for prof in app_state.config.profiles if prof.port]
     port = port or (max(configured_ports, default=-1) + 1) or DEFAULT_PORT
-    # Determine home mount path unless provided.
-    home_mount = home_mount or str(Path.home() / f"aiidalab-{profile}")
 
     try:
         new_profile = Profile(
