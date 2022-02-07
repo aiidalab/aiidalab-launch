@@ -96,7 +96,7 @@ def pytest_addoption(parser):
         action="store_true",
         dest="slow",
         default=False,
-        help="Enabel long running tests.",
+        help="Enable long running tests.",
     )
 
 
