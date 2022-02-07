@@ -317,7 +317,7 @@ class AiidaLabInstance:
                 LOGGER.info(
                     f"Ensure home mount point ({self.profile.home_mount}) exists."
                 )
-                home_mount_path.mkdir(exist_ok=True)
+                home_mount_path.mkdir(exist_ok=True, parents=True)
 
     def create(self) -> Container:
         assert self._container is None
