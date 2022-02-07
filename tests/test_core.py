@@ -87,6 +87,7 @@ def test_instance_pull(instance):
 async def test_instance_create_remove(instance):
     assert await instance.status() is instance.AiidaLabInstanceStatus.DOWN
     instance.create()
+    assert instance.container is not None
     assert await instance.status() is instance.AiidaLabInstanceStatus.CREATED
     # The instance is automatically stopped and removed by the fixture
     # function.
