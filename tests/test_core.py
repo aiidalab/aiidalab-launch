@@ -6,6 +6,7 @@
 """
 import asyncio
 from dataclasses import replace
+from pathlib import Path
 from time import sleep
 
 import pytest
@@ -62,13 +63,26 @@ async def test_instance_init(instance):
     assert await instance.status() is instance.AiidaLabInstanceStatus.DOWN
 
 
-@pytest.mark.trylast
 async def test_instance_create_remove(instance):
     assert await instance.status() is instance.AiidaLabInstanceStatus.DOWN
     instance.create()
     assert await instance.status() is instance.AiidaLabInstanceStatus.CREATED
     # The instance is automatically stopped and removed by the fixture
     # function.
+
+
+async def test_instance_profile_detection(instance):
+    assert await instance.status() is instance.AiidaLabInstanceStatus.DOWN
+    instance.create()
+    assert await instance.status() is instance.AiidaLabInstanceStatus.CREATED
+    assert instance.profile == Profile.from_container(instance.container)
+
+
+async def test_instance_home_bind_mount(instance):
+    instance.profile.home_mount = str(Path.home() / "aiidalab")
+    instance.create()
+    assert await instance.status() is instance.AiidaLabInstanceStatus.CREATED
+    assert instance.profile == Profile.from_container(instance.container)
 
 
 @pytest.mark.slow
