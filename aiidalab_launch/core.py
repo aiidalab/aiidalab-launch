@@ -63,14 +63,6 @@ def _get_host_ports(container: Container) -> Generator[int, None, None]:
         pass
 
 
-def _get_system_user(container: Container) -> str:
-    return get_docker_env(container, "SYSTEM_USER")
-
-
-def _get_jupyter_token(container: Container) -> str:
-    return get_docker_env(container, "JUPYTER_TOKEN")
-
-
 def _get_aiidalab_default_apps(container: Container) -> list:
     try:
         return get_docker_env(container, "AIIDALAB_DEFAULT_APPS").split()
@@ -128,7 +120,7 @@ class Profile:
                 f"Container {container.id} does not appear to be an AiiDAlab container."
             )
 
-        system_user = _get_system_user(container)
+        system_user = get_docker_env(container, "SYSTEM_USER")
         return Profile(
             name=profile_name,
             port=_get_configured_host_port(container),
@@ -492,7 +484,7 @@ class AiidaLabInstance:
         self.container.reload()
         host_ports = list(_get_host_ports(self.container))
         if len(host_ports) > 0:
-            jupyter_token = _get_jupyter_token(self.container)
+            jupyter_token = get_docker_env(self.container, "JUPYTER_TOKEN")
             return f"http://localhost:{host_ports[0]}/?token={jupyter_token}"
         else:
             raise NoHostPortAssigned(self.container.id)
