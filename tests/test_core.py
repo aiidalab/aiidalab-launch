@@ -6,6 +6,7 @@
 """
 import asyncio
 import re
+from copy import deepcopy
 from dataclasses import replace
 from pathlib import Path
 from time import sleep
@@ -89,6 +90,53 @@ async def test_instance_home_bind_mount(instance):
     instance.create()
     assert await instance.status() is instance.AiidaLabInstanceStatus.CREATED
     assert instance.profile == Profile.from_container(instance.container)
+
+
+async def test_profile_configuration_changes(instance):
+    original_profile = deepcopy(instance.profile)
+
+    with pytest.raises(RequiresContainerInstance):
+        list(instance.configuration_changes())
+
+    instance.create()
+    assert not any(instance.configuration_changes())
+
+    # Change name
+    instance.profile.name = "some_other_name"
+    assert "Profile configuration has changed." in instance.configuration_changes()
+    instance.profile = deepcopy(original_profile)
+    assert not any(instance.configuration_changes())
+
+    # Change port
+    assert instance.profile.port != 50000
+    instance.profile.port = 50000
+    assert "Profile configuration has changed." in instance.configuration_changes()
+    instance.profile = deepcopy(original_profile)
+    assert not any(instance.configuration_changes())
+
+    # Change default apps
+    instance.profile.default_apps = ["foo"]
+    assert "Profile configuration has changed." in instance.configuration_changes()
+    instance.profile = deepcopy(original_profile)
+    assert not any(instance.configuration_changes())
+
+    # Change system user
+    instance.profile.system_user = "john"
+    assert "Profile configuration has changed." in instance.configuration_changes()
+    instance.profile = deepcopy(original_profile)
+    assert not any(instance.configuration_changes())
+
+    # Change image
+    instance.profile.image = "aiidalab/aiidalab-docker-stack:1234"
+    assert "Profile configuration has changed." in instance.configuration_changes()
+    instance.profile = deepcopy(original_profile)
+    assert not any(instance.configuration_changes())
+
+    # Change home mount
+    instance.profile.home_mount = "some_other_volume"
+    assert "Profile configuration has changed." in instance.configuration_changes()
+    instance.profile = deepcopy(original_profile)
+    assert not any(instance.configuration_changes())
 
 
 @pytest.mark.slow
