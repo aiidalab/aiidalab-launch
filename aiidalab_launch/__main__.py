@@ -114,12 +114,22 @@ class ApplicationState:
             # https://github.com/aiidalab/aiidalab-launch/issues/72.
             self.config.profiles[0].home_mount = str(home_bind_mount_path)
 
-        self.config.version = str(parse(__version__))
-        self.config.save(_application_config_path())
-
     def apply_migrations(self):
+        config_changed = False
+
+        # No config file saved to disk.
+        if not _application_config_path().is_file():
+            self._apply_migration_null()
+            config_changed = True
+
+        # No version string stored in config.
         if self.config.version is None:
-            self._apply_migration_null()  # no config file saved to disk
+            self.config.version = str(parse(__version__))
+            config_changed = True
+
+        # Write any changes back to disk.
+        if config_changed:
+            self.config.save(_application_config_path())
 
 
 pass_app_state = click.make_pass_decorator(ApplicationState, ensure=True)
