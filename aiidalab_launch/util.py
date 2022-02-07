@@ -3,10 +3,10 @@ import logging
 import re
 import webbrowser
 from contextlib import contextmanager
-from pathlib import Path, PurePosixPath
+from pathlib import Path, PosixPath, PurePosixPath, WindowsPath
 from textwrap import wrap
 from threading import Event, Thread, Timer
-from typing import Any, AsyncGenerator, Generator, Iterable, Optional
+from typing import Any, AsyncGenerator, Generator, Iterable, Optional, Union
 
 import click
 import click_spinner
@@ -159,11 +159,36 @@ def confirm_with_value(value: str, text: str, abort: bool = False) -> bool:
         return False
 
 
-def docker_bind_mount_path(path: Path) -> PurePosixPath:
-    "Construct the expected docker bind mount path (platform independent)."
-    return PurePosixPath(
-        "/host_mnt/", path.drive.strip(":"), path.relative_to(path.drive, path.root)
-    )
+def docker_mount_for(
+    container: docker.models.containers.Container, destination: PurePosixPath
+) -> Union[Path, str]:
+    """Identify the Docker mount bind path or volume for a given destination."""
+    try:
+        mount = [
+            mount
+            for mount in container.attrs["Mounts"]
+            if mount["Destination"] == str(destination)
+        ][0]
+    except IndexError:
+        raise ValueError(f"No mount point for {destination}.")
+    if mount["Type"] == "bind":
+        docker_root = PurePosixPath("/host_mnt")
+        docker_path = PurePosixPath(mount["Source"])
+        try:  # Windows
+            drive = docker_path.relative_to(docker_root).parts[0]
+            return WindowsPath(
+                f"{drive}:",
+                docker_path.root,
+                docker_path.relative_to(docker_root, drive),
+            )
+        except ValueError:  # Linux
+            return PosixPath(docker_path)
+        except NotImplementedError:  # OS-X
+            return PosixPath(docker_root.root, docker_path.relative_to(docker_root))
+    elif mount["Type"] == "volume":
+        return mount["Name"]
+    else:
+        raise RuntimeError("Unexpected mount type.")
 
 
 def get_docker_env(container: docker.models.containers.Container, env_name: str) -> str:
