@@ -84,6 +84,12 @@ def test_instance_pull(instance):
         ).pull()
 
 
+def test_instance_unknown_image(instance):
+    assert (
+        replace(instance, profile=replace(instance.profile, image="abc")).image is None
+    )
+
+
 async def test_instance_create_remove(instance):
     assert await instance.status() is instance.AiidaLabInstanceStatus.DOWN
     instance.create()
