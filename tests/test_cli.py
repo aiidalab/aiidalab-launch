@@ -96,7 +96,7 @@ def test_add_profile_invalid_name():
 @pytest.mark.trylast
 def test_start_stop(instance):
     runner: CliRunner = CliRunner()
-    result: Result = runner.invoke(cli.cli, ["start"])
+    result: Result = runner.invoke(cli.cli, ["start", "--no-browser"])
     assert result.exit_code == 0
     result: Result = runner.invoke(cli.cli, ["status"])
     assert result.exit_code == 0
