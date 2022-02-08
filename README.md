@@ -41,6 +41,10 @@ See `aiidalab-launch profiles --help` for more information.
 
 Please see [here](ssh-forward.md) for instructions on how to run AiiDAlab on a remote machine and then forward it to your local terminal.
 
+## Compatibility
+
+This package follows the Python compatibility and deprecation schedule specified by [NEP 29](https://numpy.org/neps/nep-0029-deprecation_policy.html).
+
 ## Authors
 
 * **Carl Simon Adorf (EPFL)** - [@csadorf](https://github.com/csadorf)
