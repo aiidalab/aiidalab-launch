@@ -3,8 +3,9 @@ name: continuous-integration
 
 on:
     push:
+        branches: [$default-branch]
     pull_request:
-        types: [opened, reopened]
+        branches: [$default-branch]
 
 jobs:
 
