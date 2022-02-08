@@ -70,6 +70,20 @@ async def test_instance_init(instance):
     assert await instance.status() is instance.AiidaLabInstanceStatus.DOWN
 
 
+def test_instance_pull(instance):
+    assert (
+        "hello-world:latest"
+        in replace(instance, profile=replace(instance.profile, image="hello-world"))
+        .pull()
+        .tags
+    )
+    with pytest.raises(RuntimeError):
+        replace(
+            instance,
+            profile=replace(instance.profile, image="hello-world:no-valid-tag"),
+        ).pull()
+
+
 async def test_instance_create_remove(instance):
     assert await instance.status() is instance.AiidaLabInstanceStatus.DOWN
     instance.create()
