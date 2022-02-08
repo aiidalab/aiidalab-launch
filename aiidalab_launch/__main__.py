@@ -739,11 +739,8 @@ def reset(app_state, profile, apps, yes):
         )
         rmtree_(Path(profile.home_mount) / "apps")
     else:
-        click.echo("Removing container and associated volumes.")
-        instance.remove()
-
-        click.echo(f"Removing home directory '{profile.home_mount}'.")
-        rmtree_(Path(profile.home_mount))
+        click.echo("Removing container and associated (data) volumes.")
+        instance.remove(data=True)
 
 
 if __name__ == "__main__":
