@@ -10,6 +10,7 @@ from dataclasses import asdict, dataclass, field
 from enum import Enum, auto
 from pathlib import Path, PurePosixPath
 from secrets import token_hex
+from shutil import rmtree
 from typing import Any, AsyncGenerator, Generator
 from urllib.parse import quote_plus
 from uuid import uuid4
@@ -351,7 +352,7 @@ class AiidaLabInstance:
         except AttributeError:
             raise RuntimeError("no container")
 
-    def remove(self) -> None:
+    def remove(self, data: bool = False) -> None:
         # Remove container
         if self.container:
             self.container.remove()
@@ -366,6 +367,20 @@ class AiidaLabInstance:
             )
         except Exception as error:  # unexpected error
             raise RuntimeError(f"Failed to remove conda volume: {error}")
+
+        if data:
+            # Remove home volume
+            try:
+                home_mount = docker_mount_for(
+                    self.container,
+                    PurePosixPath("/home", _get_system_user(self.container)),
+                )
+                if isinstance(home_mount, Path) and home_mount.is_absolute():
+                    rmtree(home_mount)
+                else:
+                    self.client.volumes.get(home_mount).remove()
+            except Exception as error:  # unexpected error
+                raise RuntimeError(f"Failed to remove home volume: {error}")
 
     def logs(
         self, stream: bool = False, follow: bool = False

@@ -9,6 +9,7 @@ Provide fixtures for all tests.
 import random
 import string
 import sys
+from functools import partial
 from pathlib import Path
 
 import click
@@ -78,7 +79,7 @@ def docker_client():
 def instance(docker_client, profile):
     instance = AiidaLabInstance(client=docker_client, profile=profile)
     yield instance
-    for op in (instance.stop, instance.remove):
+    for op in (instance.stop, partial(instance.remove, data=True)):
         try:
             op()
         except (docker.errors.NotFound, RequiresContainerInstance):
