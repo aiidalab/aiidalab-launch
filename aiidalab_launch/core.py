@@ -275,16 +275,15 @@ class AiidaLabInstance:
             yield self._home_mount()
 
     def configuration_changes(self) -> Generator[str, None, None]:
+        self._requires_container()
         assert self.container is not None
         assert self.image is not None
 
         if self.container.image.id != self.image.id:
             yield "Image has changed."
 
-        if self.profile.conda_volume_name() not in (
-            mount.get("Name") for mount in self.container.attrs["Mounts"]
-        ):
-            yield "Mount point configuration has changed."
+        if self.profile != Profile.from_container(self.container):
+            yield "Profile configuration has changed."
 
     def pull(self) -> docker.models.images.Image:
         try:
