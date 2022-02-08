@@ -182,3 +182,13 @@ def test_instance_url(started_instance):
 @pytest.mark.trylast
 def test_instance_host_ports(started_instance):
     assert len(started_instance.host_ports()) > 0
+
+
+@pytest.mark.slow
+@pytest.mark.trylast
+def test_instance_exec_create(docker_client, started_instance):
+    exec_id = started_instance.exec_create(cmd="whoami")
+    assert docker_client.api.exec_start(exec_id).decode().strip() == "aiida"
+
+    exec_id_privileged = started_instance.exec_create(cmd="whoami", privileged=True)
+    assert docker_client.api.exec_start(exec_id_privileged).decode().strip() == "root"
