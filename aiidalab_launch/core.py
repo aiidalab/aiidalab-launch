@@ -45,13 +45,21 @@ def _default_port() -> int:  # explicit function required to enable test patchin
     return DEFAULT_PORT
 
 
-def _get_host_port(container: Container) -> int | None:
+def _get_configured_host_port(container: Container) -> int | None:
     try:
         host_config = container.attrs["HostConfig"]
-        return int(host_config["PortBindings"]["8888/tcp"][0]["HostPort"])
+        return int(host_config["PortBindings"]["8888/tcp"][0]["HostPort"]) or None
     except (KeyError, IndexError, ValueError):
         pass
     return None
+
+
+def _get_host_ports(container: Container) -> Generator[int, None, None]:
+    try:
+        ports = container.attrs["NetworkSettings"]["Ports"]
+        yield from (int(i["HostPort"]) for i in ports["8888/tcp"])
+    except KeyError:
+        pass
 
 
 def _get_system_user(container: Container) -> str:
@@ -122,7 +130,7 @@ class Profile:
         system_user = _get_system_user(container)
         return Profile(
             name=profile_name,
-            port=_get_host_port(container),
+            port=_get_configured_host_port(container),
             default_apps=_get_aiidalab_default_apps(container),
             home_mount=str(
                 docker_mount_for(container, PurePosixPath("/", "home", system_user))
@@ -184,6 +192,10 @@ class FailedToWaitForServices(RuntimeError):
 
 class RequiresContainerInstance(RuntimeError):
     """Raised when trying to perform operation that requires a container instance."""
+
+
+class NoHostPortAssigned(RuntimeError):
+    """Raised when then trying to obtain the instance URL, but there is not host port."""
 
 
 @contextmanager
@@ -416,13 +428,24 @@ class AiidaLabInstance:
             else:
                 raise FailedToWaitForServices("Failed to reach notebook service.")
 
+    async def _host_port_assigned(self) -> None:
+        container = self.container
+        assert container is not None
+        while True:
+            container.reload()
+            if any(_get_host_ports(container)):
+                break
+            asyncio.sleep(1)
+
     async def wait_for_services(self) -> None:
         if self.container is None:
             raise RuntimeError("Instance was not created.")
 
         LOGGER.info(f"Waiting for services to come up ({self.container.id})...")
         await asyncio.gather(
-            self._init_scripts_finished(), self._notebook_service_online()
+            self._init_scripts_finished(),
+            self._notebook_service_online(),
+            self._host_port_assigned(),
         )
 
     async def status(self, timeout: float | None = 5.0) -> AiidaLabInstanceStatus:
@@ -444,8 +467,19 @@ class AiidaLabInstance:
                 return self.AiidaLabInstanceStatus.EXITED
         return self.AiidaLabInstanceStatus.DOWN
 
-    def url(self) -> str:
+    def host_ports(self) -> list[int]:
+        self._requires_container()
         assert self.container is not None
-        host_port = _get_host_port(self.container)
-        jupyter_token = _get_jupyter_token(self.container)
-        return f"http://localhost:{host_port}/?token={jupyter_token}"
+        self.container.reload()
+        return list(_get_host_ports(self.container))
+
+    def url(self) -> str:
+        self._requires_container()
+        assert self.container is not None
+        self.container.reload()
+        host_ports = list(_get_host_ports(self.container))
+        if len(host_ports) > 0:
+            jupyter_token = _get_jupyter_token(self.container)
+            return f"http://localhost:{host_ports[0]}/?token={jupyter_token}"
+        else:
+            raise NoHostPortAssigned(self.container.id)

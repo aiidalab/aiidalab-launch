@@ -487,13 +487,15 @@ async def _async_start(
                 else MSG_STARTUP
             )
             url = instance.url()
+            host_ports = instance.host_ports()
+            assert len(host_ports) > 0
             click.secho(
                 msg_startup.format(
                     url=url,
                     home_mount=instance.profile.home_mount,
                     system_user=instance.profile.system_user,
                     user=getpass.getuser(),
-                    port=instance.profile.port,
+                    port=host_ports[0],
                     hostname=socket.getfqdn(),
                 ).lstrip(),
                 fg="green",

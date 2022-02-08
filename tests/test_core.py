@@ -5,13 +5,19 @@
 .. moduleauthor:: Carl Simon Adorf <simon.adorf@epfl.ch>
 """
 import asyncio
+import re
 from dataclasses import replace
 from pathlib import Path
 from time import sleep
 
 import pytest
 
-from aiidalab_launch.core import Config, Profile
+from aiidalab_launch.core import (
+    Config,
+    NoHostPortAssigned,
+    Profile,
+    RequiresContainerInstance,
+)
 
 VALID_PROFILE_NAMES = ["abc", "Abc", "aBC", "a0", "a-a", "a-0"]
 
@@ -88,17 +94,29 @@ async def test_instance_home_bind_mount(instance):
 @pytest.mark.slow
 @pytest.mark.trylast
 async def test_instance_start_stop(instance):
+    with pytest.raises(RequiresContainerInstance):
+        instance.url()
     assert await instance.status() is instance.AiidaLabInstanceStatus.DOWN
     instance.start()
     sleep(0.1)
     assert await instance.status() is instance.AiidaLabInstanceStatus.STARTING
 
-    # premature additional start should have no negative effect
+    # It is possible that the call below will succeed/fail non-deterministically.
+    assert re.match(r"http:\/\/localhost:\d+\/\?token=[a-f0-9]{64}", instance.url())
+
+    # second call to start should have no negative effect
     instance.start()
 
     await asyncio.wait_for(instance.wait_for_services(), timeout=300)
     assert await instance.status() is instance.AiidaLabInstanceStatus.UP
+
+    assert re.match(r"http:\/\/localhost:\d+\/\?token=[a-f0-9]{64}", instance.url())
+
     instance.stop()
     assert await instance.status() is instance.AiidaLabInstanceStatus.EXITED
+
+    with pytest.raises(NoHostPortAssigned):
+        instance.url()
+
     instance.remove()
     assert await instance.status() is instance.AiidaLabInstanceStatus.DOWN
