@@ -166,7 +166,19 @@ def test_instance_url_before_start(instance):
 
 @pytest.mark.slow
 @pytest.mark.trylast
+async def test_instance_status(started_instance):
+    assert await started_instance.status() is started_instance.AiidaLabInstanceStatus.UP
+
+
+@pytest.mark.slow
+@pytest.mark.trylast
 def test_instance_url(started_instance):
     assert re.match(
         r"http:\/\/localhost:\d+\/\?token=[a-f0-9]{64}", started_instance.url()
     )
+
+
+@pytest.mark.slow
+@pytest.mark.trylast
+def test_instance_host_ports(started_instance):
+    assert len(started_instance.host_ports()) > 0
