@@ -8,7 +8,7 @@ import re
 from contextlib import contextmanager
 from dataclasses import asdict, dataclass, field
 from enum import Enum, auto
-from pathlib import Path, PosixPath, PurePosixPath, WindowsPath
+from pathlib import Path, PurePosixPath
 from secrets import token_hex
 from typing import Any, AsyncGenerator, Generator
 from urllib.parse import quote_plus
@@ -19,7 +19,7 @@ import toml
 from docker.models.containers import Container
 from packaging.version import parse as parse_version
 
-from .util import _async_wrap_iter, get_docker_env
+from .util import _async_wrap_iter, docker_mount_for, get_docker_env
 from .version import __version__
 
 MAIN_PROFILE_NAME = "default"
@@ -67,35 +67,6 @@ def _get_aiidalab_default_apps(container: Container) -> list:
         return get_docker_env(container, "AIIDALAB_DEFAULT_APPS").split()
     except KeyError:
         return []
-
-
-def _find_docker_home_mount(container: Container, system_user: str) -> Path | None:
-    # Find the specified home bind mount path for the existing container.
-    try:
-        home_mount = [
-            mount
-            for mount in container.attrs["Mounts"]
-            if mount["Destination"] == f"/home/{system_user}"
-        ][0]
-    except IndexError:
-        return None
-    if home_mount["Type"] == "bind":
-        docker_root = PurePosixPath("/host_mnt")
-        docker_path = PurePosixPath(home_mount["Source"])
-        try:
-            # Try Windows
-            drive = docker_path.relative_to(docker_root).parts[0]
-            return WindowsPath(
-                f"{drive}:",
-                docker_path.root,
-                docker_path.relative_to(docker_root, drive),
-            )
-        except NotImplementedError:
-            return PosixPath(docker_root.root, docker_path.relative_to(docker_root))
-    elif home_mount["Type"] == "volume":
-        return home_mount["Name"]
-    else:
-        raise RuntimeError("Unexpected mount type.")
 
 
 @dataclass
@@ -147,13 +118,15 @@ class Profile:
             raise RuntimeError(
                 f"Container {container.id} does not appear to be an AiiDAlab container."
             )
-        system_user = _get_system_user(container)
 
+        system_user = _get_system_user(container)
         return Profile(
             name=profile_name,
             port=_get_host_port(container),
             default_apps=_get_aiidalab_default_apps(container),
-            home_mount=str(_find_docker_home_mount(container, system_user)),
+            home_mount=str(
+                docker_mount_for(container, PurePosixPath("/", "home", system_user))
+            ),
             image=container.image.tags[0],
             system_user=system_user,
         )
@@ -317,7 +290,7 @@ class AiidaLabInstance:
                 LOGGER.info(
                     f"Ensure home mount point ({self.profile.home_mount}) exists."
                 )
-                home_mount_path.mkdir(exist_ok=True)
+                home_mount_path.mkdir(exist_ok=True, parents=True)
 
     def create(self) -> Container:
         assert self._container is None
