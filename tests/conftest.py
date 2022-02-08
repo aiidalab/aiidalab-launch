@@ -6,11 +6,13 @@
 
 Provide fixtures for all tests.
 """
+import asyncio
 import random
 import string
 import sys
 from functools import partial
 from pathlib import Path
+from typing import Iterator
 
 import click
 import docker
@@ -30,9 +32,30 @@ def random_token():
     return "".join(random.choices(string.ascii_lowercase + string.digits, k=8))
 
 
-@pytest.fixture(autouse=True)
-def default_port(monkeypatch):
-    monkeypatch.setattr(aiidalab_launch.core, "DEFAULT_PORT", None)
+# Redefine event_loop fixture to be session-scoped.
+# See: https://github.com/pytest-dev/pytest-asyncio#async-fixtures
+@pytest.fixture(scope="session")
+def event_loop(request: "pytest.FixtureRequest") -> Iterator[asyncio.AbstractEventLoop]:
+    """Create an instance of the default event loop for the whole session."""
+    loop = asyncio.get_event_loop_policy().new_event_loop()
+    yield loop
+    loop.close()
+
+
+# Adapted from https://github.com/pytest-dev/pytest/issues/1872#issuecomment-375108891:
+@pytest.fixture(scope="session")
+def monkeypatch_session():
+    from _pytest.monkeypatch import MonkeyPatch
+
+    m = MonkeyPatch()
+    yield m
+    m.undo()
+
+
+# Avoid interfering with used ports on the host system.
+@pytest.fixture(scope="session", autouse=True)
+def default_port(monkeypatch_session):
+    monkeypatch_session.setattr(aiidalab_launch.core, "DEFAULT_PORT", None)
     yield None
 
 
@@ -89,6 +112,24 @@ def instance(docker_client, profile):
                 f"WARNING: Issue while stopping/removing instance: {error}",
                 file=sys.stderr,
             )
+
+
+@pytest.fixture
+async def started_instance(instance):
+    instance.create()
+    assert instance.container is not None
+    assert await instance.status() is instance.AiidaLabInstanceStatus.CREATED
+    instance.start()
+    assert (
+        await asyncio.wait_for(instance.status(), timeout=20)
+        is instance.AiidaLabInstanceStatus.STARTING
+    )
+    await asyncio.wait_for(instance.wait_for_services(), timeout=300)
+    assert (
+        await asyncio.wait_for(instance.status(), timeout=20)
+        is instance.AiidaLabInstanceStatus.UP
+    )
+    yield instance
 
 
 def pytest_addoption(parser):

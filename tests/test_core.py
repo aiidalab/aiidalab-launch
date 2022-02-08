@@ -4,21 +4,14 @@
 .. currentmodule:: test_core
 .. moduleauthor:: Carl Simon Adorf <simon.adorf@epfl.ch>
 """
-import asyncio
 import re
 from copy import deepcopy
 from dataclasses import replace
 from pathlib import Path
-from time import sleep
 
 import pytest
 
-from aiidalab_launch.core import (
-    Config,
-    NoHostPortAssigned,
-    Profile,
-    RequiresContainerInstance,
-)
+from aiidalab_launch.core import Config, Profile, RequiresContainerInstance
 
 VALID_PROFILE_NAMES = ["abc", "Abc", "aBC", "a0", "a-a", "a-0"]
 
@@ -166,32 +159,14 @@ async def test_profile_configuration_changes(instance):
     assert not any(instance.configuration_changes())
 
 
-@pytest.mark.slow
-@pytest.mark.trylast
-async def test_instance_start_stop(instance):
+def test_instance_url_before_start(instance):
     with pytest.raises(RequiresContainerInstance):
         instance.url()
-    assert await instance.status() is instance.AiidaLabInstanceStatus.DOWN
-    instance.start()
-    sleep(0.1)
-    assert await instance.status() is instance.AiidaLabInstanceStatus.STARTING
 
-    # It is possible that the call below will succeed/fail non-deterministically.
-    assert re.match(r"http:\/\/localhost:\d+\/\?token=[a-f0-9]{64}", instance.url())
 
-    # second call to start should have no negative effect
-    instance.start()
-
-    await asyncio.wait_for(instance.wait_for_services(), timeout=300)
-    assert await instance.status() is instance.AiidaLabInstanceStatus.UP
-
-    assert re.match(r"http:\/\/localhost:\d+\/\?token=[a-f0-9]{64}", instance.url())
-
-    instance.stop()
-    assert await instance.status() is instance.AiidaLabInstanceStatus.EXITED
-
-    with pytest.raises(NoHostPortAssigned):
-        instance.url()
-
-    instance.remove()
-    assert await instance.status() is instance.AiidaLabInstanceStatus.DOWN
+@pytest.mark.slow
+@pytest.mark.trylast
+def test_instance_url(started_instance):
+    assert re.match(
+        r"http:\/\/localhost:\d+\/\?token=[a-f0-9]{64}", started_instance.url()
+    )

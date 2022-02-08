@@ -94,6 +94,19 @@ def test_add_profile_invalid_name():
 
 @pytest.mark.slow
 @pytest.mark.trylast
+def test_status(started_instance):
+    runner: CliRunner = CliRunner()
+    result: Result = runner.invoke(cli.cli, ["status"])
+    assert result.exit_code == 0
+    assert started_instance.profile.name in result.output
+    assert started_instance.profile.container_name() in result.output
+    assert "up" in result.output
+    assert started_instance.profile.home_mount in result.output
+    assert started_instance.url() in result.output
+
+
+@pytest.mark.slow
+@pytest.mark.trylast
 def test_start_stop(instance):
     runner: CliRunner = CliRunner()
     result: Result = runner.invoke(cli.cli, ["start", "--no-browser"])
