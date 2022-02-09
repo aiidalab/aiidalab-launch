@@ -170,7 +170,9 @@ def test_remove_running_profile(started_instance):
 @pytest.mark.trylast
 def test_start_stop(instance):
     runner: CliRunner = CliRunner()
-    result: Result = runner.invoke(cli.cli, ["start", "--no-browser"])
+    result: Result = runner.invoke(
+        cli.cli, ["-vvv", "start", "--no-browser", "--wait=300"]
+    )
     assert result.exit_code == 0
     result: Result = runner.invoke(cli.cli, ["status"])
     assert result.exit_code == 0
