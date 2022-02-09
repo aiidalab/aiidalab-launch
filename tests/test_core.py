@@ -4,21 +4,14 @@
 .. currentmodule:: test_core
 .. moduleauthor:: Carl Simon Adorf <simon.adorf@epfl.ch>
 """
-import asyncio
 import re
 from copy import deepcopy
 from dataclasses import replace
 from pathlib import Path
-from time import sleep
 
 import pytest
 
-from aiidalab_launch.core import (
-    Config,
-    NoHostPortAssigned,
-    Profile,
-    RequiresContainerInstance,
-)
+from aiidalab_launch.core import Config, Profile, RequiresContainerInstance
 
 VALID_PROFILE_NAMES = ["abc", "Abc", "aBC", "a0", "a-a", "a-0"]
 
@@ -62,6 +55,12 @@ def test_config_dumps_loads(config):
     assert config == Config.loads(config.dumps())
 
 
+@pytest.mark.parametrize("safe", [True, False])
+def test_config_save(tmp_path, config, safe):
+    config.save(tmp_path / "config.json", safe=safe)
+    assert Config.load(tmp_path / "config.json") == config
+
+
 def test_config_version(config):
     assert config.version is None
 
@@ -84,9 +83,16 @@ def test_instance_pull(instance):
         ).pull()
 
 
+def test_instance_unknown_image(instance):
+    assert (
+        replace(instance, profile=replace(instance.profile, image="abc")).image is None
+    )
+
+
 async def test_instance_create_remove(instance):
     assert await instance.status() is instance.AiidaLabInstanceStatus.DOWN
     instance.create()
+    assert instance.container is not None
     assert await instance.status() is instance.AiidaLabInstanceStatus.CREATED
     # The instance is automatically stopped and removed by the fixture
     # function.
@@ -153,32 +159,36 @@ async def test_profile_configuration_changes(instance):
     assert not any(instance.configuration_changes())
 
 
-@pytest.mark.slow
-@pytest.mark.trylast
-async def test_instance_start_stop(instance):
+def test_instance_url_before_start(instance):
     with pytest.raises(RequiresContainerInstance):
         instance.url()
-    assert await instance.status() is instance.AiidaLabInstanceStatus.DOWN
-    instance.start()
-    sleep(0.1)
-    assert await instance.status() is instance.AiidaLabInstanceStatus.STARTING
 
-    # It is possible that the call below will succeed/fail non-deterministically.
-    assert re.match(r"http:\/\/localhost:\d+\/\?token=[a-f0-9]{64}", instance.url())
 
-    # second call to start should have no negative effect
-    instance.start()
+@pytest.mark.slow
+@pytest.mark.trylast
+async def test_instance_status(started_instance):
+    assert await started_instance.status() is started_instance.AiidaLabInstanceStatus.UP
 
-    await asyncio.wait_for(instance.wait_for_services(), timeout=300)
-    assert await instance.status() is instance.AiidaLabInstanceStatus.UP
 
-    assert re.match(r"http:\/\/localhost:\d+\/\?token=[a-f0-9]{64}", instance.url())
+@pytest.mark.slow
+@pytest.mark.trylast
+def test_instance_url(started_instance):
+    assert re.match(
+        r"http:\/\/localhost:\d+\/\?token=[a-f0-9]{64}", started_instance.url()
+    )
 
-    instance.stop()
-    assert await instance.status() is instance.AiidaLabInstanceStatus.EXITED
 
-    with pytest.raises(NoHostPortAssigned):
-        instance.url()
+@pytest.mark.slow
+@pytest.mark.trylast
+def test_instance_host_ports(started_instance):
+    assert len(started_instance.host_ports()) > 0
 
-    instance.remove()
-    assert await instance.status() is instance.AiidaLabInstanceStatus.DOWN
+
+@pytest.mark.slow
+@pytest.mark.trylast
+def test_instance_exec_create(docker_client, started_instance):
+    exec_id = started_instance.exec_create(cmd="whoami")
+    assert docker_client.api.exec_start(exec_id).decode().strip() == "aiida"
+
+    exec_id_privileged = started_instance.exec_create(cmd="whoami", privileged=True)
+    assert docker_client.api.exec_start(exec_id_privileged).decode().strip() == "root"
