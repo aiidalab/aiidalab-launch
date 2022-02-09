@@ -27,7 +27,15 @@ from aiidalab_launch.core import (
 )
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")
+def docker_client():
+    try:
+        yield docker.from_env()
+    except docker.errors.DockerException:
+        pytest.skip("docker not available")
+
+
+@pytest.fixture  # TODO: move lower
 def random_token():
     return "".join(random.choices(string.ascii_lowercase + string.digits, k=8))
 
@@ -59,16 +67,7 @@ def default_port(monkeypatch_session):
     yield None
 
 
-@pytest.fixture(autouse=True)
-def app_config(tmp_path, monkeypatch):
-    app_config_dir = tmp_path.joinpath("app_dirs")
-    monkeypatch.setattr(
-        click, "get_app_dir", lambda app_id: str(app_config_dir.joinpath(app_id))
-    )
-    yield app_config_dir
-
-
-@pytest.fixture(autouse=True)
+@pytest.fixture
 def container_prefix(random_token, monkeypatch):
     container_prefix = f"aiidalab-launch_tests_{random_token}_"
     monkeypatch.setattr(aiidalab_launch.core, "CONTAINER_PREFIX", container_prefix)
@@ -81,21 +80,22 @@ def home_path(tmp_path, monkeypatch):
 
 
 @pytest.fixture
-def profile():
-    return Profile()
+def app_config(tmp_path, monkeypatch):
+    app_config_dir = tmp_path.joinpath("app_dirs")
+    monkeypatch.setattr(
+        click, "get_app_dir", lambda app_id: str(app_config_dir.joinpath(app_id))
+    )
+    yield app_config_dir
 
 
 @pytest.fixture
-def config():
+def config(app_config):
     return Config()
 
 
 @pytest.fixture
-def docker_client():
-    try:
-        yield docker.from_env()
-    except docker.errors.DockerException:
-        pytest.skip("docker not available")
+def profile(config, container_prefix):
+    return Profile()
 
 
 @pytest.fixture
