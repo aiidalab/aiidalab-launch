@@ -368,17 +368,16 @@ class AiidaLabInstance:
         except Exception as error:  # unexpected error
             raise RuntimeError(f"Failed to remove conda volume: {error}")
 
-        if data:
+        if data and self.profile.home_mount:
             # Remove home volume
+            home_mount_path = PurePosixPath(self.profile.home_mount)
             try:
-                home_mount = docker_mount_for(
-                    self.container,
-                    PurePosixPath("/home", _get_system_user(self.container)),
-                )
-                if isinstance(home_mount, Path) and home_mount.is_absolute():
-                    rmtree(home_mount)
+                if home_mount_path.is_absolute():
+                    rmtree(home_mount_path)
                 else:
-                    self.client.volumes.get(home_mount).remove()
+                    self.client.volumes.get(str(home_mount_path)).remove()
+            except docker.errors.NotFound:
+                pass  # already removed
             except Exception as error:  # unexpected error
                 raise RuntimeError(f"Failed to remove home volume: {error}")
 
