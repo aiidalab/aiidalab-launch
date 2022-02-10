@@ -1,5 +1,11 @@
 # AiiDAlab Launch
 
+[![PyPI version](https://badge.fury.io/py/aiidalab-launch.svg)](https://badge.fury.io/py/aiidalab-launch)
+[![PyPI pyversions](https://img.shields.io/pypi/pyversions/aiidalab-launch.svg)](https://pypi.python.org/pypi/aiidalab-launch/)
+![Build status](https://github.com/aiidalab/aiidalab-launch/actions/workflows/ci.yml/badge.svg?branch=main)
+[![codecov](https://codecov.io/gh/aiidalab/aiidalab-launch/branch/main/graph/badge.svg?token=7FOZR20CHS)](https://codecov.io/gh/aiidalab/aiidalab-launch)
+[![Commit Activity](https://img.shields.io/github/commit-activity/m/aiidalab/aiidalab-launch.svg)](https://github.com/aiidalab/aiidalab-launch/pulse)
+
 AiiDAlab Launch makes it easy to run AiiDAlab on your own workstation or laptop.
 
 ## Getting Started
