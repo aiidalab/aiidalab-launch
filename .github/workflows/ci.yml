@@ -53,10 +53,12 @@ jobs:
             - name: Run tests
               run: |
                   pytest -v --slow
-                  coverage json
+                  coverage xml
 
             - name: Upload coverage to Codecov
               uses: codecov/codecov-action@v2
+              with:
+                  flags: py-${{ matrix.python-version }}
 
     test-installation-with-pipx:
 
