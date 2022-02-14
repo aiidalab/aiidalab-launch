@@ -10,7 +10,6 @@ import logging
 import socket
 from dataclasses import dataclass, field
 from pathlib import Path
-from shutil import rmtree
 from textwrap import wrap
 
 import click
@@ -690,15 +689,10 @@ def exec(ctx, profile, cmd, privileged, forward_exit_code, wait):
 
 
 @cli.command()
-@click.option(
-    "--apps",
-    is_flag=True,
-    help="Only remove installed apps. The default apps will be installed on the next instance start.",
-)
 @click.option("--yes", is_flag=True, help="Do not ask for confirmation.")
 @with_profile
 @pass_app_state
-def reset(app_state, profile, apps, yes):
+def reset(app_state, profile, yes):
     """Reset an AiiDAlab instance."""
     # Check (and abort) in case that the instance is running.
     instance = AiidaLabInstance(client=app_state.docker_client, profile=profile)
@@ -724,23 +718,8 @@ def reset(app_state, profile, apps, yes):
             profile.name, "Please enter the name of the profile to continue", abort=True
         )
 
-    def rmtree_(path: Path) -> None:
-        if path.exists():
-            try:
-                rmtree(path)
-            except Exception as error:
-                raise click.ClickException(
-                    f"Encountered error while trying to remove '{path}': {error}"
-                )
-
-    if apps:
-        click.echo(
-            "Removing apps directory. Default apps will be installed on next start."
-        )
-        rmtree_(Path(profile.home_mount) / "apps")
-    else:
-        click.echo("Removing container and associated (data) volumes.")
-        instance.remove(data=True)
+    click.echo("Removing container and associated (data) volumes.")
+    instance.remove(data=True)
 
 
 if __name__ == "__main__":
