@@ -7,6 +7,7 @@
 This is the test module for the project's command-line interface (CLI)
 module.
 """
+import docker
 import pytest
 from click.testing import CliRunner, Result
 
@@ -162,7 +163,13 @@ class TestsAgainstStartedInstance:
 @pytest.mark.slow
 @pytest.mark.trylast
 class TestInstanceLifecycle:
-    def test_start_stop(self, instance):
+    def test_start_stop_reset(self, instance, docker_client):
+        def get_volume(volume_name):
+            try:
+                return docker_client.volumes.get(volume_name)
+            except docker.errors.NotFound:
+                return None
+
         runner: CliRunner = CliRunner()
         result: Result = runner.invoke(
             cli.cli, ["-vvv", "start", "--no-browser", "--wait=300"]
@@ -170,9 +177,29 @@ class TestInstanceLifecycle:
         assert result.exit_code == 0
         result: Result = runner.invoke(cli.cli, ["status"])
         assert result.exit_code == 0
+
+        assert get_volume(instance.profile.home_mount)
+        assert get_volume(instance.profile.conda_volume_name())
+
         result: Result = runner.invoke(cli.cli, ["stop", "--remove"])
         assert result.exit_code == 0
         result: Result = runner.invoke(cli.cli, ["status"])
         assert result.exit_code == 0
         assert instance.profile.container_name() in result.output
         assert "down" in result.output
+
+        assert get_volume(instance.profile.home_mount)
+        assert not get_volume(instance.profile.conda_volume_name())
+
+        # Should not throw:
+        assert get_volume(instance.profile.home_mount)
+        assert not get_volume(instance.profile.conda_volume_name())
+
+        # Reset everything
+        result: Result = runner.invoke(
+            cli.cli, ["reset"], input=f"{instance.profile.name}\n"
+        )
+        assert result.exit_code == 0
+
+        assert not get_volume(instance.profile.home_mount)
+        assert not get_volume(instance.profile.conda_volume_name())
