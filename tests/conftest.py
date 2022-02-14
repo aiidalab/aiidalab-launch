@@ -27,24 +27,6 @@ from aiidalab_launch.core import (
 )
 
 
-@pytest.fixture(scope="session")
-def docker_client():
-    try:
-        yield docker.from_env()
-    except docker.errors.DockerException:
-        pytest.skip("docker not available")
-
-
-@pytest.fixture
-def random_token():
-    return "".join(random.choices(string.ascii_lowercase + string.digits, k=8))
-
-
-@pytest.fixture(scope="session")
-def session_token():
-    return "".join(random.choices(string.ascii_lowercase + string.digits, k=8))
-
-
 # Redefine event_loop fixture to be session-scoped.
 # See: https://github.com/pytest-dev/pytest-asyncio#async-fixtures
 @pytest.fixture(scope="session")
@@ -65,6 +47,14 @@ def monkeypatch_session():
     m.undo()
 
 
+@pytest.fixture(scope="session")
+def docker_client():
+    try:
+        yield docker.from_env()
+    except docker.errors.DockerException:
+        pytest.skip("docker not available")
+
+
 # Avoid interfering with used ports on the host system.
 @pytest.fixture(scope="session", autouse=True)
 def _default_port(monkeypatch_session):
@@ -72,38 +62,32 @@ def _default_port(monkeypatch_session):
     yield None
 
 
-@pytest.fixture
-def _container_prefix(random_token, monkeypatch):
-    container_prefix = f"aiidalab-launch_tests_{random_token}_"
-    monkeypatch.setattr(aiidalab_launch.core, "CONTAINER_PREFIX", container_prefix)
-    yield container_prefix
+@pytest.fixture(scope="class")
+def _random_token():
+    return "".join(random.choices(string.ascii_lowercase + string.digits, k=8))
 
 
-@pytest.fixture(scope="session")
-def _shared_container_prefix(monkeypatch_session, session_token):
-    container_prefix = f"aiidalab-launch_tests_session_{session_token}_"
+# Avoid interfering with containers on the host system.
+@pytest.fixture(scope="class", autouse=True)
+def _container_prefix(_random_token, monkeypatch_session):
+    container_prefix = f"aiidalab-launch_tests_{_random_token}_"
     monkeypatch_session.setattr(
         aiidalab_launch.core, "CONTAINER_PREFIX", container_prefix
     )
     yield container_prefix
 
 
-@pytest.fixture(autouse=True)
-def home_path(tmp_path, monkeypatch):
-    monkeypatch.setattr(Path, "home", lambda: tmp_path.joinpath("home"))
+# Avoid accidentally reading or writing from the host home directory.
+@pytest.fixture(scope="class", autouse=True)
+def home_path(tmp_path_factory, monkeypatch_session):
+    home_dir = tmp_path_factory.mktemp("home")
+    assert isinstance(home_dir, Path)
+    monkeypatch_session.setattr(Path, "home", lambda: home_dir)
 
 
-@pytest.fixture
-def app_config(tmp_path, monkeypatch):
-    app_config_dir = tmp_path.joinpath("app_dirs")
-    monkeypatch.setattr(
-        click, "get_app_dir", lambda app_id: str(app_config_dir.joinpath(app_id))
-    )
-    yield app_config_dir
-
-
-@pytest.fixture(scope="session")
-def _shared_app_config(tmp_path_factory, monkeypatch_session):
+# Avoid accidentically reading or writing from the host config directory.
+@pytest.fixture(scope="class", autouse=True)
+def app_config_dir(tmp_path_factory, monkeypatch_session):
     app_config_dir = tmp_path_factory.mktemp("app_dirs")
     monkeypatch_session.setattr(
         click, "get_app_dir", lambda app_id: str(app_config_dir.joinpath(app_id))
@@ -111,27 +95,17 @@ def _shared_app_config(tmp_path_factory, monkeypatch_session):
     yield app_config_dir
 
 
-@pytest.fixture
-def config(app_config):
+@pytest.fixture(scope="class")
+def config():
     return Config()
 
 
-@pytest.fixture(scope="session")
-def _shared_config(_shared_app_config):
-    return Config()
-
-
-@pytest.fixture
-def profile(config, _container_prefix):
+@pytest.fixture(scope="class")
+def profile(config):
     return Profile()
 
 
-@pytest.fixture(scope="session")
-def _shared_profile(_shared_config, _shared_container_prefix):
-    return Profile()
-
-
-@pytest.fixture
+@pytest.fixture(scope="class")
 def instance(docker_client, profile):
     instance = AiidaLabInstance(client=docker_client, profile=profile)
     yield instance
@@ -147,41 +121,22 @@ def instance(docker_client, profile):
             )
 
 
-@pytest.fixture(scope="session")
-def _shared_instance(docker_client, _shared_profile):
-    instance = AiidaLabInstance(client=docker_client, profile=_shared_profile)
+@pytest.fixture(scope="class")
+async def started_instance(instance):
+    instance.create()
+    assert instance.container is not None
+    assert await instance.status() is instance.AiidaLabInstanceStatus.CREATED
+    instance.start()
+    assert (
+        await asyncio.wait_for(instance.status(), timeout=20)
+        is instance.AiidaLabInstanceStatus.STARTING
+    )
+    await asyncio.wait_for(instance.wait_for_services(), timeout=300)
+    assert (
+        await asyncio.wait_for(instance.status(), timeout=20)
+        is instance.AiidaLabInstanceStatus.UP
+    )
     yield instance
-    for op in (instance.stop, partial(instance.remove, data=True)):
-        try:
-            op()
-        except (docker.errors.NotFound, RequiresContainerInstance):
-            continue
-        except (RuntimeError, docker.errors.APIError) as error:
-            print(
-                f"WARNING: Issue while stopping/removing instance: {error}",
-                file=sys.stderr,
-            )
-
-
-@pytest.fixture(scope="session")
-async def started_instance(_shared_instance):
-    _shared_instance.create()
-    assert _shared_instance.container is not None
-    assert (
-        await _shared_instance.status()
-        is _shared_instance.AiidaLabInstanceStatus.CREATED
-    )
-    _shared_instance.start()
-    assert (
-        await asyncio.wait_for(_shared_instance.status(), timeout=20)
-        is _shared_instance.AiidaLabInstanceStatus.STARTING
-    )
-    await asyncio.wait_for(_shared_instance.wait_for_services(), timeout=300)
-    assert (
-        await asyncio.wait_for(_shared_instance.status(), timeout=20)
-        is _shared_instance.AiidaLabInstanceStatus.UP
-    )
-    yield _shared_instance
 
 
 def pytest_addoption(parser):
