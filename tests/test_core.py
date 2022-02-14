@@ -166,29 +166,27 @@ def test_instance_url_before_start(instance):
 
 @pytest.mark.slow
 @pytest.mark.trylast
-async def test_instance_status(started_instance):
-    assert await started_instance.status() is started_instance.AiidaLabInstanceStatus.UP
+@pytest.mark.usefixtures("started_instance")
+class TestsAgainstStartedInstance:
+    async def test_instance_status(self, started_instance):
+        assert (
+            await started_instance.status()
+            is started_instance.AiidaLabInstanceStatus.UP
+        )
 
+    def test_instance_url(self, started_instance):
+        assert re.match(
+            r"http:\/\/localhost:\d+\/\?token=[a-f0-9]{64}", started_instance.url()
+        )
 
-@pytest.mark.slow
-@pytest.mark.trylast
-def test_instance_url(started_instance):
-    assert re.match(
-        r"http:\/\/localhost:\d+\/\?token=[a-f0-9]{64}", started_instance.url()
-    )
+    def test_instance_host_ports(self, started_instance):
+        assert len(started_instance.host_ports()) > 0
 
+    def test_instance_exec_create(self, docker_client, started_instance):
+        exec_id = started_instance.exec_create(cmd="whoami")
+        assert docker_client.api.exec_start(exec_id).decode().strip() == "aiida"
 
-@pytest.mark.slow
-@pytest.mark.trylast
-def test_instance_host_ports(started_instance):
-    assert len(started_instance.host_ports()) > 0
-
-
-@pytest.mark.slow
-@pytest.mark.trylast
-def test_instance_exec_create(docker_client, started_instance):
-    exec_id = started_instance.exec_create(cmd="whoami")
-    assert docker_client.api.exec_start(exec_id).decode().strip() == "aiida"
-
-    exec_id_privileged = started_instance.exec_create(cmd="whoami", privileged=True)
-    assert docker_client.api.exec_start(exec_id_privileged).decode().strip() == "root"
+        exec_id_privileged = started_instance.exec_create(cmd="whoami", privileged=True)
+        assert (
+            docker_client.api.exec_start(exec_id_privileged).decode().strip() == "root"
+        )

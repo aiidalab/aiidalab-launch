@@ -47,19 +47,19 @@ def test_version_verbose_logging():
     assert "Verbose logging is enabled." in result.output.strip()
 
 
-def test_list_profiles(app_config):
+def test_list_profiles():
     runner: CliRunner = CliRunner()
     result: Result = runner.invoke(cli.cli, ["profiles", "list"])
     assert "default" in result.output.strip()
 
 
-def test_show_profile(app_config):
+def test_show_profile():
     runner: CliRunner = CliRunner()
     result: Result = runner.invoke(cli.cli, ["profiles", "show", "default"])
     assert Profile.loads("default", result.output) == Profile()
 
 
-def test_change_default_profile(app_config):
+def test_change_default_profile():
     runner: CliRunner = CliRunner()
     result: Result = runner.invoke(cli.cli, ["profiles", "set-default", "default"])
     assert result.exit_code == 0
@@ -70,7 +70,7 @@ def test_change_default_profile(app_config):
     assert "does not exist" in result.output
 
 
-def test_add_remove_profile(app_config):
+def test_add_remove_profile():
     runner: CliRunner = CliRunner()
 
     # Add new-profile
@@ -118,7 +118,7 @@ def test_add_remove_profile(app_config):
     assert "Profile with name 'new-profile' does not exist." in result.output
 
 
-def test_add_profile_invalid_name(app_config):
+def test_add_profile_invalid_name():
     runner: CliRunner = CliRunner()
     # underscores are not allowed
     result: Result = runner.invoke(cli.cli, ["profiles", "add", "new_profile"])
@@ -128,57 +128,51 @@ def test_add_profile_invalid_name(app_config):
 
 @pytest.mark.slow
 @pytest.mark.trylast
-def test_status(started_instance):
-    runner: CliRunner = CliRunner()
-    result: Result = runner.invoke(cli.cli, ["status"])
-    assert result.exit_code == 0
-    assert started_instance.profile.name in result.output
-    assert started_instance.profile.container_name() in result.output
-    assert "up" in result.output
-    assert started_instance.profile.home_mount in result.output
-    assert started_instance.url() in result.output
+@pytest.mark.usefixtures("started_instance")
+class TestsAgainstStartedInstance:
+    def test_status(self, started_instance):
+        runner: CliRunner = CliRunner()
+        result: Result = runner.invoke(cli.cli, ["status"])
+        assert result.exit_code == 0
+        assert started_instance.profile.name in result.output
+        assert started_instance.profile.container_name() in result.output
+        assert "up" in result.output
+        assert started_instance.profile.home_mount in result.output
+        assert started_instance.url() in result.output
+
+    def test_exec(self):
+        runner: CliRunner = CliRunner()
+        result: Result = runner.invoke(cli.cli, ["exec", "--", "whoami"])
+        assert result.exit_code == 0
+        assert "aiida" in result.output
+
+    def test_logs(self):
+        runner: CliRunner = CliRunner()
+        result: Result = runner.invoke(cli.cli, ["logs"])
+        assert result.exit_code == 0
+        assert len(result.output.strip().splitlines()) > 100
+
+    def test_remove_running_profile(self):
+        runner: CliRunner = CliRunner()
+        result: Result = runner.invoke(cli.cli, ["profiles", "remove", "default"])
+        assert result.exit_code == 1
+        assert "is still running" in result.output
 
 
 @pytest.mark.slow
 @pytest.mark.trylast
-def test_exec(started_instance):
-    runner: CliRunner = CliRunner()
-    result: Result = runner.invoke(cli.cli, ["exec", "--", "whoami"])
-    assert result.exit_code == 0
-    assert "aiida" in result.output
-
-
-@pytest.mark.slow
-@pytest.mark.trylast
-def test_logs(started_instance):
-    runner: CliRunner = CliRunner()
-    result: Result = runner.invoke(cli.cli, ["logs"])
-    assert result.exit_code == 0
-    assert len(result.output.strip().splitlines()) > 100
-
-
-@pytest.mark.slow
-@pytest.mark.trylast
-def test_remove_running_profile(started_instance):
-    runner: CliRunner = CliRunner()
-    result: Result = runner.invoke(cli.cli, ["profiles", "remove", "default"])
-    assert result.exit_code == 1
-    assert "is still running" in result.output
-
-
-@pytest.mark.slow
-@pytest.mark.trylast
-def test_start_stop(instance):
-    runner: CliRunner = CliRunner()
-    result: Result = runner.invoke(
-        cli.cli, ["-vvv", "start", "--no-browser", "--wait=300"]
-    )
-    assert result.exit_code == 0
-    result: Result = runner.invoke(cli.cli, ["status"])
-    assert result.exit_code == 0
-    result: Result = runner.invoke(cli.cli, ["stop", "--remove"])
-    assert result.exit_code == 0
-    result: Result = runner.invoke(cli.cli, ["status"])
-    assert result.exit_code == 0
-    assert instance.profile.container_name() in result.output
-    assert "down" in result.output
+class TestInstanceLifecycle:
+    def test_start_stop(self, instance):
+        runner: CliRunner = CliRunner()
+        result: Result = runner.invoke(
+            cli.cli, ["-vvv", "start", "--no-browser", "--wait=300"]
+        )
+        assert result.exit_code == 0
+        result: Result = runner.invoke(cli.cli, ["status"])
+        assert result.exit_code == 0
+        result: Result = runner.invoke(cli.cli, ["stop", "--remove"])
+        assert result.exit_code == 0
+        result: Result = runner.invoke(cli.cli, ["status"])
+        assert result.exit_code == 0
+        assert instance.profile.container_name() in result.output
+        assert "down" in result.output
