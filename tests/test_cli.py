@@ -205,8 +205,9 @@ class TestInstanceLifecycle:
 
         # Restart instance.
         result: Result = runner.invoke(
-            cli.cli, ["-vvv", "start", "--no-browser", "--wait=600", "--restart"]
+            cli.cli, ["-vvv", "start", "--no-browser", "--wait=120", "--restart"]
         )
+        print(result.output)
         assert result.exit_code == 0
         assert_status_up()
 
