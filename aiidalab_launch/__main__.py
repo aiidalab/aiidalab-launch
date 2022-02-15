@@ -17,7 +17,8 @@ from packaging.version import parse
 from tabulate import tabulate
 
 from .application_state import ApplicationState
-from .core import DEFAULT_PORT, LOGGER, AiidaLabInstance, Profile
+from .core import LOGGER, AiidaLabInstance
+from .profile import DEFAULT_PORT, Profile
 from .util import confirm_with_value, get_latest_version, spinner, webbrowser_available
 from .version import __version__
 
