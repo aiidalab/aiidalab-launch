@@ -7,6 +7,8 @@
 This is the test module for the project's command-line interface (CLI)
 module.
 """
+from time import sleep
+
 import docker
 import pytest
 from click.testing import CliRunner, Result
@@ -204,6 +206,7 @@ class TestInstanceLifecycle:
         assert_status_up()
 
         # Restart instance.
+        sleep(5)  # Do not try to restart immediately.
         result: Result = runner.invoke(
             cli.cli, ["-vvv", "start", "--no-browser", "--wait=120", "--restart"]
         )
