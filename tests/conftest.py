@@ -19,12 +19,9 @@ import docker
 import pytest
 
 import aiidalab_launch
-from aiidalab_launch.core import (
-    AiidaLabInstance,
-    Config,
-    Profile,
-    RequiresContainerInstance,
-)
+from aiidalab_launch.config import Config
+from aiidalab_launch.instance import AiidaLabInstance, RequiresContainerInstance
+from aiidalab_launch.profile import Profile
 
 
 # Redefine event_loop fixture to be session-scoped.
@@ -58,7 +55,7 @@ def docker_client():
 # Avoid interfering with used ports on the host system.
 @pytest.fixture(scope="session", autouse=True)
 def _default_port(monkeypatch_session):
-    monkeypatch_session.setattr(aiidalab_launch.core, "DEFAULT_PORT", None)
+    monkeypatch_session.setattr(aiidalab_launch.profile, "DEFAULT_PORT", None)
     yield None
 
 
@@ -72,7 +69,7 @@ def _random_token():
 def _container_prefix(_random_token, monkeypatch_session):
     container_prefix = f"aiidalab-launch_tests_{_random_token}_"
     monkeypatch_session.setattr(
-        aiidalab_launch.core, "CONTAINER_PREFIX", container_prefix
+        aiidalab_launch.profile, "CONTAINER_PREFIX", container_prefix
     )
     yield container_prefix
 

@@ -13,7 +13,7 @@ from click.testing import CliRunner, Result
 
 import aiidalab_launch.__main__ as cli
 from aiidalab_launch import __version__
-from aiidalab_launch.core import Profile
+from aiidalab_launch.profile import Profile
 
 # To learn more about testing Click applications, visit the link below.
 # http://click.pocoo.org/5/testing/

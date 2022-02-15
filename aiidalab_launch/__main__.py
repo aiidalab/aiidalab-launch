@@ -8,7 +8,6 @@ import asyncio
 import getpass
 import logging
 import socket
-from dataclasses import dataclass, field
 from pathlib import Path
 from textwrap import wrap
 
@@ -17,21 +16,11 @@ import docker
 from packaging.version import parse
 from tabulate import tabulate
 
-from .core import (
-    APPLICATION_ID,
-    DEFAULT_PORT,
-    LOGGER,
-    AiidaLabInstance,
-    Config,
-    Profile,
-)
-from .util import (
-    confirm_with_value,
-    get_docker_client,
-    get_latest_version,
-    spinner,
-    webbrowser_available,
-)
+from .application_state import ApplicationState
+from .core import LOGGER
+from .instance import AiidaLabInstance
+from .profile import DEFAULT_PORT, Profile
+from .util import confirm_with_value, get_latest_version, spinner, webbrowser_available
 from .version import __version__
 
 MSG_MOUNT_POINT_CONFLICT = """Warning: There is at least one other running
@@ -73,64 +62,6 @@ LOGGING_LEVELS = {
 }  #: a mapping of `verbose` option counts to logging levels
 
 
-def _application_config_path():
-    return Path(click.get_app_dir(APPLICATION_ID)) / "config.toml"
-
-
-def _load_config():
-    try:
-        return Config.load(_application_config_path())
-    except FileNotFoundError:
-        return Config()
-
-
-@dataclass
-class ApplicationState:
-
-    config: Config = field(default_factory=_load_config)
-    docker_client: docker.DockerClient = field(default_factory=get_docker_client)
-
-    def _apply_migration_null(self):
-        # Since there is no config file on disk, we can assume that if at all,
-        # there is only the default profile present.
-        assert len(self.config.profiles) == 1
-        assert self.config.profiles[0].name == "default"
-
-        default_profile = self.config.profiles[0]
-        instance = AiidaLabInstance(client=self.docker_client, profile=default_profile)
-
-        # Default home bind mount path up until version 2022.1011.
-        home_bind_mount_path = Path.home() / "aiidalab"
-
-        if instance.container:
-            # There is already a container present, use previously used profile.
-            self.config.profiles[0] = Profile.from_container(instance.container)
-
-        elif home_bind_mount_path.exists():
-            # Using ~/aiidalab as home directory mount point, since the
-            # directory exists. The default mount point was changed to be a
-            # docker volume after version 2022.1011 to address issue
-            # https://github.com/aiidalab/aiidalab-launch/issues/72.
-            self.config.profiles[0].home_mount = str(home_bind_mount_path)
-
-    def apply_migrations(self):
-        config_changed = False
-
-        # No config file saved to disk.
-        if not _application_config_path().is_file():
-            self._apply_migration_null()
-            config_changed = True
-
-        # No version string stored in config.
-        if self.config.version is None:
-            self.config.version = str(parse(__version__))
-            config_changed = True
-
-        # Write any changes back to disk.
-        if config_changed:
-            self.config.save(_application_config_path())
-
-
 pass_app_state = click.make_pass_decorator(ApplicationState, ensure=True)
 
 
@@ -167,7 +98,7 @@ def cli(app_state, verbose):
             err=True,
         )
 
-    LOGGER.info(f"Configuration file path: {_application_config_path()}")
+    LOGGER.info(f"Configuration file path: {app_state.config_path}")
 
     latest_version = get_latest_version(timeout=0.1)
     if latest_version and latest_version > parse(__version__):
@@ -264,7 +195,7 @@ def add_profile(ctx, app_state, port, home_mount, profile):
         raise click.ClickException(error)
 
     app_state.config.profiles.append(new_profile)
-    app_state.config.save(_application_config_path())
+    app_state.save_config()
     click.echo(f"Added profile '{profile}'.")
     if click.confirm("Do you want to edit it now?", default=True):
         ctx.invoke(edit_profile, profile=profile)
@@ -300,7 +231,7 @@ def remove_profile(app_state, profile, yes, force):
             f"Are you sure you want to remove profile '{profile.name}'?"
         ):
             app_state.config.profiles.remove(profile)
-            app_state.config.save(_application_config_path())
+            app_state.save_config()
             click.echo(f"Removed profile with name '{profile.name}'.")
 
 
@@ -316,7 +247,7 @@ def edit_profile(app_state, profile):
         if new_profile != current_profile:
             app_state.config.profiles.remove(current_profile)
             app_state.config.profiles.append(new_profile)
-            app_state.config.save(_application_config_path())
+            app_state.save_config()
             return
     click.echo("No changes.")
 
@@ -332,7 +263,7 @@ def set_default_profile(app_state, profile):
         raise click.ClickException(f"A profile with name '{profile}' does not exist.")
     else:
         app_state.config.default_profile = profile
-        app_state.config.save(_application_config_path())
+        app_state.save_config()
         click.echo(f"Set default profile to '{profile}'.")
 
 

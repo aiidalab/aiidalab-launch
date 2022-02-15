@@ -11,58 +11,8 @@ from pathlib import Path
 
 import pytest
 
-from aiidalab_launch.core import Config, Profile, RequiresContainerInstance
-
-VALID_PROFILE_NAMES = ["abc", "Abc", "aBC", "a0", "a-a", "a-0"]
-
-INVALID_PROFILE_NAMES = ["", ".a", "a_a", "_a"]
-
-
-def test_profile_init(profile):
-    pass
-
-
-@pytest.mark.parametrize("name", VALID_PROFILE_NAMES)
-def test_profile_init_valid_names(profile, name):
-    assert replace(profile, name=name).name == name
-
-
-@pytest.mark.parametrize("name", INVALID_PROFILE_NAMES)
-def test_profile_init_invalid_names(profile, name):
-    with pytest.raises(ValueError):
-        replace(profile, name=name)
-
-
-def test_profile_equality(profile):
-    assert profile == profile
-    assert profile != replace(profile, name="other")
-
-
-def test_profile_dumps_loads(profile):
-    assert profile == Profile.loads(profile.name, profile.dumps())
-
-
-def test_config_init(config):
-    pass
-
-
-def test_config_equality(config):
-    assert config == config
-    assert config != replace(config, default_profile="other")
-
-
-def test_config_dumps_loads(config):
-    assert config == Config.loads(config.dumps())
-
-
-@pytest.mark.parametrize("safe", [True, False])
-def test_config_save(tmp_path, config, safe):
-    config.save(tmp_path / "config.json", safe=safe)
-    assert Config.load(tmp_path / "config.json") == config
-
-
-def test_config_version(config):
-    assert config.version is None
+from aiidalab_launch.instance import RequiresContainerInstance
+from aiidalab_launch.profile import Profile
 
 
 async def test_instance_init(instance):
