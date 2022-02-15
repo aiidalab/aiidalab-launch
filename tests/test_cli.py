@@ -7,6 +7,8 @@
 This is the test module for the project's command-line interface (CLI)
 module.
 """
+import logging
+
 import docker
 import pytest
 from click.testing import CliRunner, Result
@@ -163,7 +165,9 @@ class TestsAgainstStartedInstance:
 @pytest.mark.slow
 @pytest.mark.trylast
 class TestInstanceLifecycle:
-    def test_start_stop_reset(self, instance, docker_client):
+    def test_start_stop_reset(self, instance, docker_client, caplog):
+        caplog.set_level(logging.DEBUG)
+
         def get_volume(volume_name):
             try:
                 return docker_client.volumes.get(volume_name)
@@ -186,9 +190,7 @@ class TestInstanceLifecycle:
 
         # Start instance.
         runner: CliRunner = CliRunner()
-        result: Result = runner.invoke(
-            cli.cli, ["-vvv", "start", "--no-browser", "--wait=300"]
-        )
+        result: Result = runner.invoke(cli.cli, ["start", "--no-browser", "--wait=300"])
         assert result.exit_code == 0
 
         assert_status_up()
@@ -196,16 +198,14 @@ class TestInstanceLifecycle:
         assert get_volume(instance.profile.conda_volume_name())
 
         # Start instance again – should be noop.
-        result: Result = runner.invoke(
-            cli.cli, ["-vvv", "start", "--no-browser", "--wait=300"]
-        )
+        result: Result = runner.invoke(cli.cli, ["start", "--no-browser", "--wait=300"])
         assert "Container was already running" in result.output.strip()
         assert result.exit_code == 0
         assert_status_up()
 
         # Restart instance.
         result: Result = runner.invoke(
-            cli.cli, ["-vvv", "start", "--no-browser", "--wait=600", "--restart"]
+            cli.cli, ["start", "--no-browser", "--wait=120", "--restart"]
         )
         assert result.exit_code == 0
         assert_status_up()
