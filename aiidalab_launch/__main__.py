@@ -353,8 +353,11 @@ async def _async_start(
         elif status is InstanceStatus.UP and restart:
             with spinner("Restarting container..."):
                 if configuration_changed:
+                    print("stopping...")
                     instance.stop()
+                    print("recreating...")
                     instance.recreate()
+                    print("starting...")
                     instance.start()
                 else:
                     instance.restart()
@@ -409,9 +412,13 @@ async def _async_start(
                 if (show_ssh_help or not webbrowser_available())
                 else MSG_STARTUP
             )
+            print("generate url...")
             url = instance.url()
+            print("grabbing host ports...")
             host_ports = instance.host_ports()
+            print("asserting host ports...")
             assert len(host_ports) > 0
+            print("presenting startup message...")
             click.secho(
                 msg_startup.format(
                     url=url,
