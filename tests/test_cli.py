@@ -216,7 +216,7 @@ class TestInstanceLifecycle:
         assert_status_down()
 
         assert get_volume(instance.profile.home_mount)
-        assert not get_volume(instance.profile.conda_volume_name())
+        assert get_volume(instance.profile.conda_volume_name())
 
         # Reset instance.
         result: Result = runner.invoke(

@@ -109,7 +109,7 @@ def profile(config):
 def instance(docker_client, profile):
     instance = AiidaLabInstance(client=docker_client, profile=profile)
     yield instance
-    for op in (instance.stop, partial(instance.remove, data=True)):
+    for op in (instance.stop, partial(instance.remove, conda=True, data=True)):
         try:
             op()
         except (docker.errors.NotFound, RequiresContainerInstance):

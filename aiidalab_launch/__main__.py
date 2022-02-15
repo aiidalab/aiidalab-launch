@@ -398,17 +398,11 @@ async def _async_start(
             "Try to use '--pull' to pull the image prior to start."
         )
 
-    # Check if image has changed.
-    assert instance.image is not None
-    image_changed = (
-        instance.container and instance.container.image.id != instance.image.id
-    )
-    mounts_changed = (
-        instance.container
-        and f"{instance.profile.container_name()}_conda"
-        not in (mount.get("Name") for mount in instance.container.attrs["Mounts"])
-    )
-    recreate = image_changed or mounts_changed
+    # Check if the container configuration has changed.
+    if instance.container:
+        configuration_changed = any(instance.configuration_changes())
+    else:
+        configuration_changed = False
 
     try:
 
@@ -420,22 +414,21 @@ async def _async_start(
             InstanceStatus.CREATED,
             InstanceStatus.EXITED,
         ):
-            if recreate:
+            if configuration_changed:
                 with spinner("Recreating container..."):
-                    instance.remove()
-                    instance.create()
+                    instance.recreate()
             with spinner("Starting container..."):
                 instance.start()
         elif status is InstanceStatus.UP and restart:
             with spinner("Restarting container..."):
-                if any(instance.configuration_changes()):
+                if configuration_changed:
                     instance.stop()
-                    instance.remove()
+                    instance.recreate()
                     instance.start()
                 else:
                     instance.restart()
         elif status is InstanceStatus.UP and not restart:
-            if any(instance.configuration_changes()):
+            if configuration_changed:
                 click.secho(
                     "Container is already running, however the configuration "
                     "has changed. A restart with --restart is recommended.",
@@ -723,7 +716,7 @@ def reset(app_state, profile, yes):
         )
 
     click.echo("Removing container and associated (data) volumes.")
-    instance.remove(data=True)
+    instance.remove(conda=True, data=True)
 
 
 if __name__ == "__main__":
