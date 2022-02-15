@@ -219,7 +219,7 @@ def list_profiles(app_state):
 @click.argument("profile")
 @pass_app_state
 def show_profile(app_state, profile):
-    """Show a AiiDAlab profile configuration."""
+    """Show an AiiDAlab profile configuration."""
     click.echo(app_state.config.get_profile(profile).dumps(), nl=False)
 
 
@@ -276,7 +276,7 @@ def add_profile(ctx, app_state, port, home_mount, profile):
 @click.option("-f", "--force", is_flag=True, help="Proceed, ignoring any warnings.")
 @pass_app_state
 def remove_profile(app_state, profile, yes, force):
-    """Remove a AiiDAlab profile from the configuration."""
+    """Remove an AiiDAlab profile from the configuration."""
     try:
         profile = app_state.config.get_profile(profile)
     except ValueError:
@@ -308,7 +308,7 @@ def remove_profile(app_state, profile, yes, force):
 @click.argument("profile")
 @pass_app_state
 def edit_profile(app_state, profile):
-    """Edit a AiiDAlab profile configuration."""
+    """Edit an AiiDAlab profile configuration."""
     current_profile = app_state.config.get_profile(profile)
     profile_edit = click.edit(current_profile.dumps(), extension=".toml")
     if profile_edit:
@@ -325,7 +325,7 @@ def edit_profile(app_state, profile):
 @click.argument("profile")
 @pass_app_state
 def set_default_profile(app_state, profile):
-    """Set a AiiDAlab profile as default."""
+    """Set an AiiDAlab profile as default."""
     try:
         app_state.config.get_profile(profile)
     except ValueError:
@@ -658,7 +658,7 @@ def status(app_state):
 @click.pass_context
 @with_profile
 def exec(ctx, profile, cmd, privileged, forward_exit_code, wait):
-    """Directly execute a command on a AiiDAlab instance.
+    """Directly execute a command on an AiiDAlab instance.
 
     For example, to get a list of all installed aiidalab applications, run:
 
@@ -693,7 +693,11 @@ def exec(ctx, profile, cmd, privileged, forward_exit_code, wait):
 @with_profile
 @pass_app_state
 def reset(app_state, profile, yes):
-    """Reset an AiiDAlab instance."""
+    """Reset an AiiDAlab instance.
+
+    This function removes all user-installed apps and generated data. Use with
+    caution.
+    """
     # Check (and abort) in case that the instance is running.
     instance = AiidaLabInstance(client=app_state.docker_client, profile=profile)
     status = asyncio.run(instance.status())
