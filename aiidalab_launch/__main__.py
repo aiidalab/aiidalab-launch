@@ -87,8 +87,12 @@ def _load_config():
 @dataclass
 class ApplicationState:
 
+    config_path: Path = field(default_factory=_application_config_path)
     config: Config = field(default_factory=_load_config)
     docker_client: docker.DockerClient = field(default_factory=get_docker_client)
+
+    def save_config(self):
+        self.config.save(self.config_path)
 
     def _apply_migration_null(self):
         # Since there is no config file on disk, we can assume that if at all,
@@ -117,7 +121,7 @@ class ApplicationState:
         config_changed = False
 
         # No config file saved to disk.
-        if not _application_config_path().is_file():
+        if not self.config_path.is_file():
             self._apply_migration_null()
             config_changed = True
 
@@ -128,7 +132,7 @@ class ApplicationState:
 
         # Write any changes back to disk.
         if config_changed:
-            self.config.save(_application_config_path())
+            self.save_config()
 
 
 pass_app_state = click.make_pass_decorator(ApplicationState, ensure=True)
@@ -167,7 +171,7 @@ def cli(app_state, verbose):
             err=True,
         )
 
-    LOGGER.info(f"Configuration file path: {_application_config_path()}")
+    LOGGER.info(f"Configuration file path: {app_state.config_path}")
 
     latest_version = get_latest_version(timeout=0.1)
     if latest_version and latest_version > parse(__version__):
@@ -264,7 +268,7 @@ def add_profile(ctx, app_state, port, home_mount, profile):
         raise click.ClickException(error)
 
     app_state.config.profiles.append(new_profile)
-    app_state.config.save(_application_config_path())
+    app_state.save_config()
     click.echo(f"Added profile '{profile}'.")
     if click.confirm("Do you want to edit it now?", default=True):
         ctx.invoke(edit_profile, profile=profile)
@@ -300,7 +304,7 @@ def remove_profile(app_state, profile, yes, force):
             f"Are you sure you want to remove profile '{profile.name}'?"
         ):
             app_state.config.profiles.remove(profile)
-            app_state.config.save(_application_config_path())
+            app_state.save_config()
             click.echo(f"Removed profile with name '{profile.name}'.")
 
 
@@ -316,7 +320,7 @@ def edit_profile(app_state, profile):
         if new_profile != current_profile:
             app_state.config.profiles.remove(current_profile)
             app_state.config.profiles.append(new_profile)
-            app_state.config.save(_application_config_path())
+            app_state.save_config()
             return
     click.echo("No changes.")
 
@@ -332,7 +336,7 @@ def set_default_profile(app_state, profile):
         raise click.ClickException(f"A profile with name '{profile}' does not exist.")
     else:
         app_state.config.default_profile = profile
-        app_state.config.save(_application_config_path())
+        app_state.save_config()
         click.echo(f"Set default profile to '{profile}'.")
 
 
