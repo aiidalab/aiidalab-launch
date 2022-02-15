@@ -5,22 +5,18 @@ from __future__ import annotations
 import asyncio
 import logging
 from contextlib import contextmanager
-from dataclasses import asdict, dataclass, field
+from dataclasses import dataclass
 from enum import Enum, auto
 from pathlib import Path, PurePosixPath
 from secrets import token_hex
 from shutil import rmtree
 from typing import Any, AsyncGenerator, Generator
-from uuid import uuid4
 
 import docker
-import toml
 from docker.models.containers import Container
 
 from .profile import Profile
 from .util import _async_wrap_iter, get_docker_env
-
-MAIN_PROFILE_NAME = "default"
 
 APPLICATION_ID = "org.aiidalab.aiidalab_launch"
 
@@ -33,52 +29,6 @@ def _get_host_ports(container: Container) -> Generator[int, None, None]:
         yield from (int(i["HostPort"]) for i in ports["8888/tcp"])
     except KeyError:
         pass
-
-
-@dataclass
-class Config:
-    profiles: list[Profile] = field(default_factory=lambda: [Profile()])
-    default_profile: str = MAIN_PROFILE_NAME
-
-    # The configuration is always stored to disk beginning with version
-    # 2022.1012, which means we assume that if no configuration is stored
-    # we cannot make any assumptions about the latest applicable version.
-    version: str | None = None
-
-    @classmethod
-    def loads(cls, blob: str) -> Config:
-        config = toml.loads(blob)
-        config["profiles"] = [
-            Profile(name=name, **profile)
-            for name, profile in config.pop("profiles", dict()).items()
-        ]
-        return cls(**config)
-
-    def dumps(self) -> str:
-        config = asdict(self)
-        config["profiles"] = {
-            profile.pop("name"): profile for profile in config.pop("profiles", [])
-        }
-        return toml.dumps(config)
-
-    @classmethod
-    def load(cls, path: Path) -> Config:
-        return cls.loads(path.read_text())
-
-    def save(self, path: Path, safe: bool = True) -> None:
-        path.parent.mkdir(exist_ok=True, parents=True)
-        if safe:
-            path_tmp = path.with_suffix(f".{uuid4()!s}")
-            path_tmp.write_text(self.dumps())
-            path_tmp.replace(path)
-        else:
-            path.write_text(self.dumps())
-
-    def get_profile(self, name: str) -> Profile:
-        for profile in self.profiles:
-            if profile.name == name:
-                return profile
-        raise ValueError(f"Did not find profile with name '{name}'.")
 
 
 class FailedToWaitForServices(RuntimeError):

@@ -19,7 +19,8 @@ import docker
 import pytest
 
 import aiidalab_launch
-from aiidalab_launch.core import AiidaLabInstance, Config, RequiresContainerInstance
+from aiidalab_launch.config import Config
+from aiidalab_launch.core import AiidaLabInstance, RequiresContainerInstance
 from aiidalab_launch.profile import Profile
 
 
