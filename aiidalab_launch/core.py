@@ -275,6 +275,13 @@ class AiidaLabInstance:
         if self.container.image.id != self.image.id:
             yield "Image has changed."
 
+        try:
+            for mount in self._mounts():
+                if docker_mount_for(self.container, mount["Target"]) != mount["Source"]:
+                    raise ValueError
+        except ValueError:
+            yield "Mount configuration has changed."
+
         if self.profile != Profile.from_container(self.container):
             yield "Profile configuration has changed."
 
@@ -307,6 +314,12 @@ class AiidaLabInstance:
             ports={"8888/tcp": self.profile.port},
         )
         return self._container
+
+    def recreate(self) -> None:
+        self._requires_container()
+        assert self.container is not None
+        self.remove()
+        self.create()
 
     def start(self) -> None:
         self._ensure_home_mount_exists()
@@ -344,21 +357,22 @@ class AiidaLabInstance:
         except AttributeError:
             raise RuntimeError("no container")
 
-    def remove(self, data: bool = False) -> None:
+    def remove(self, conda: bool = False, data: bool = False) -> None:
         # Remove container
         if self.container:
             self.container.remove()
             self._container = None
 
         # Remove conda volume
-        try:
-            self.client.volumes.get(self.profile.conda_volume_name()).remove()
-        except docker.errors.NotFound:  # already removed
-            logging.debug(
-                f"Failed to remove conda volume '{self.profile.conda_volume_name()}', likely already removed."
-            )
-        except Exception as error:  # unexpected error
-            raise RuntimeError(f"Failed to remove conda volume: {error}")
+        if conda:
+            try:
+                self.client.volumes.get(self.profile.conda_volume_name()).remove()
+            except docker.errors.NotFound:  # already removed
+                logging.debug(
+                    f"Failed to remove conda volume '{self.profile.conda_volume_name()}', likely already removed."
+                )
+            except Exception as error:  # unexpected error
+                raise RuntimeError(f"Failed to remove conda volume: {error}")
 
         if data and self.profile.home_mount:
             # Remove home volume

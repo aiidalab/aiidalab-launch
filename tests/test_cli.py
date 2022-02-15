@@ -170,32 +170,55 @@ class TestInstanceLifecycle:
             except docker.errors.NotFound:
                 return None
 
+        def assert_status_up():
+            result: Result = runner.invoke(cli.cli, ["status"])
+            assert result.exit_code == 0
+            assert instance.profile.container_name() in result.output
+            assert "up" in result.output
+            assert instance.url() in result.output
+
+        def assert_status_down():
+            result: Result = runner.invoke(cli.cli, ["status"])
+            assert result.exit_code == 0
+            assert instance.profile.container_name() in result.output
+            assert "down" in result.output
+            assert "http" not in result.output
+
+        # Start instance.
         runner: CliRunner = CliRunner()
         result: Result = runner.invoke(
             cli.cli, ["-vvv", "start", "--no-browser", "--wait=300"]
         )
         assert result.exit_code == 0
-        result: Result = runner.invoke(cli.cli, ["status"])
+
+        assert_status_up()
+        assert get_volume(instance.profile.home_mount)
+        assert get_volume(instance.profile.conda_volume_name())
+
+        # Start instance again – should be noop.
+        result: Result = runner.invoke(
+            cli.cli, ["-vvv", "start", "--no-browser", "--wait=300"]
+        )
+        assert "Container was already running" in result.output.strip()
         assert result.exit_code == 0
+        assert_status_up()
+
+        # Restart instance.
+        result: Result = runner.invoke(
+            cli.cli, ["-vvv", "start", "--no-browser", "--wait=300", "--restart"]
+        )
+        assert result.exit_code == 0
+        assert_status_up()
+
+        # Stop (and remove) instance.
+        result: Result = runner.invoke(cli.cli, ["stop", "--remove"])
+        assert result.exit_code == 0
+        assert_status_down()
 
         assert get_volume(instance.profile.home_mount)
         assert get_volume(instance.profile.conda_volume_name())
 
-        result: Result = runner.invoke(cli.cli, ["stop", "--remove"])
-        assert result.exit_code == 0
-        result: Result = runner.invoke(cli.cli, ["status"])
-        assert result.exit_code == 0
-        assert instance.profile.container_name() in result.output
-        assert "down" in result.output
-
-        assert get_volume(instance.profile.home_mount)
-        assert not get_volume(instance.profile.conda_volume_name())
-
-        # Should not throw:
-        assert get_volume(instance.profile.home_mount)
-        assert not get_volume(instance.profile.conda_volume_name())
-
-        # Reset everything
+        # Reset instance.
         result: Result = runner.invoke(
             cli.cli, ["reset"], input=f"{instance.profile.name}\n"
         )

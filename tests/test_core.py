@@ -98,6 +98,15 @@ async def test_instance_create_remove(instance):
     # function.
 
 
+async def test_instance_recreate(instance):
+    assert await instance.status() is instance.AiidaLabInstanceStatus.DOWN
+    instance.create()
+    assert await instance.status() is instance.AiidaLabInstanceStatus.CREATED
+    instance.recreate()
+    assert instance.container is not None
+    assert await instance.status() is instance.AiidaLabInstanceStatus.CREATED
+
+
 async def test_instance_profile_detection(instance):
     assert await instance.status() is instance.AiidaLabInstanceStatus.DOWN
     instance.create()
