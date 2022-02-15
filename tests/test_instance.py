@@ -11,7 +11,7 @@ from pathlib import Path
 
 import pytest
 
-from aiidalab_launch.core import RequiresContainerInstance
+from aiidalab_launch.instance import RequiresContainerInstance
 from aiidalab_launch.profile import Profile
 
 

@@ -11,9 +11,10 @@ import click
 import docker
 from packaging.version import parse
 
-from .core import APPLICATION_ID, AiidaLabInstance
-from .profile import Profile
 from .config import Config
+from .core import APPLICATION_ID
+from .instance import AiidaLabInstance
+from .profile import Profile
 from .util import get_docker_client
 from .version import __version__
 
