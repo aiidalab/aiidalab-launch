@@ -210,6 +210,8 @@ class TestInstanceLifecycle:
             cli.cli, ["start", "--no-browser", "--wait=120", "--restart"]
         )
         print(result.output)
+        print(result.exception)
+        print(result.exc_info)
         assert result.exit_code == 0
         assert_status_up()
 
