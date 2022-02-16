@@ -286,13 +286,13 @@ class AiidaLabInstance:
         loop = asyncio.get_event_loop()
         LOGGER.debug("Waiting for notebook service to become reachable...")
         while True:
-            LOGGER.debug("Curl notebook...")
-            assert container.status == "running"
-            result = await loop.run_in_executor(
-                None,
-                container.exec_run,
-                "curl --fail-early --fail --silent --max-time 1.0 http://localhost:8888",
-            )
+            if container.status == "running":
+                LOGGER.debug("Curl notebook...")
+                result = await loop.run_in_executor(
+                    None,
+                    container.exec_run,
+                    "curl --fail-early --fail --silent --max-time 1.0 http://localhost:8888",
+                )
             if result.exit_code == 0:
                 LOGGER.debug("Notebook service reachable.")
                 return  # jupyter is online
