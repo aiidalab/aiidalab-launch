@@ -286,7 +286,7 @@ class AiidaLabInstance:
         loop = asyncio.get_event_loop()
         LOGGER.debug("Waiting for notebook service to become reachable...")
         while True:
-            if container.status == "running":
+            try:
                 LOGGER.debug("Curl notebook...")
                 result = await loop.run_in_executor(
                     None,
@@ -301,8 +301,10 @@ class AiidaLabInstance:
                     continue
                 else:
                     raise FailedToWaitForServices("Failed to reach notebook service.")
-            else:
-                await asyncio.sleep(2)  # container not running
+            except docker.errors.APIError:
+                LOGGER.warning("Failed to reach notebook service. Will try again.")
+                await asyncio.sleep(2)
+                continue
 
     @staticmethod
     async def _host_port_assigned(container: Container) -> None:
