@@ -183,8 +183,10 @@ class AiidaLabInstance:
     def restart(self) -> None:
         self._requires_container()
         assert self.container is not None
-        self.container.restart()
-        self._run_post_start()
+        # self.container.restart()
+        # self._run_post_start()
+        self.stop(timeout=20)
+        self.start()
 
     def _run_post_start(self) -> None:
         assert self.container is not None
