@@ -284,18 +284,15 @@ class AiidaLabInstance:
 
     @staticmethod
     async def _notebook_service_online(container: Container) -> None:
-        # loop = asyncio.get_event_loop()  # DEBUG
+        loop = asyncio.get_event_loop()
         LOGGER.debug("Waiting for notebook service to become reachable...")
         while True:
             LOGGER.debug("Curl notebook...")
-            result = container.exec_run(
-                "curl --fail-early --fail --silent --max-time 1.0 http://localhost:8888"
-            )  # DEBUG
-            # result = await loop.run_in_executor(
-            #    None,
-            #    container.exec_run,
-            #    "curl --fail-early --fail --silent --max-time 1.0 http://localhost:8888",
-            # )
+            result = await loop.run_in_executor(
+                None,
+                container.exec_run,
+                "curl --fail-early --fail --silent --max-time 1.0 http://localhost:8888",
+            )
             if result.exit_code == 0:
                 LOGGER.debug("Notebook service reachable.")
                 return  # jupyter is online
