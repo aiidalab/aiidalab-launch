@@ -212,6 +212,10 @@ class TestInstanceLifecycle:
         print(result.output)
         print(result.exception)
         print(result.exc_info)
+        print("Traceback:")
+        import traceback
+
+        traceback.print_tb(result.exc_info[2])
         assert result.exit_code == 0
         assert_status_up()
 
