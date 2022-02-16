@@ -287,21 +287,12 @@ class AiidaLabInstance:
         LOGGER.debug("Waiting for notebook service to become reachable...")
         while True:
             LOGGER.debug("Curl notebook...")
-            try:
-                result = await loop.run_in_executor(
-                    None,
-                    container.exec_run,
-                    "curl --fail-early --fail --silent --max-time 1.0 http://localhost:8888",
-                )
-            except docker.errors.APIError as error:
-                LOGGER.warning(f"Encountered phantom API error: {error}, continue...")
-                container = self._get_container()
-                if container is None:
-                    raise FailedToWaitForServices(
-                        "Container died while curling notebook."
-                    )
-                await asyncio.sleep(2)
-                continue
+            assert container.status == "running"
+            result = await loop.run_in_executor(
+                None,
+                container.exec_run,
+                "curl --fail-early --fail --silent --max-time 1.0 http://localhost:8888",
+            )
             if result.exit_code == 0:
                 LOGGER.debug("Notebook service reachable.")
                 return  # jupyter is online
