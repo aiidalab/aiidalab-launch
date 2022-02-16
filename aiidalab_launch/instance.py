@@ -9,6 +9,7 @@ from enum import Enum, auto
 from pathlib import Path, PurePosixPath
 from secrets import token_hex
 from shutil import rmtree
+from time import time
 from typing import Any, AsyncGenerator, Generator
 
 import docker
@@ -309,10 +310,14 @@ class AiidaLabInstance:
             raise RuntimeError("Instance was not created.")
 
         LOGGER.info(f"Waiting for services to come up ({self.container.id})...")
+        start = time()
         await asyncio.gather(
             self._init_scripts_finished(),
             self._notebook_service_online(),
             self._host_port_assigned(),
+        )
+        LOGGER.info(
+            f"Services came up after {time() - start:.1f} seconds ({self.container.id})."
         )
 
     async def status(self, timeout: float | None = 5.0) -> AiidaLabInstanceStatus:
