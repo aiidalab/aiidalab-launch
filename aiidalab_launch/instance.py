@@ -302,9 +302,10 @@ class AiidaLabInstance:
                 else:
                     raise FailedToWaitForServices("Failed to reach notebook service.")
             except docker.errors.APIError:
-                LOGGER.warning("Failed to reach notebook service. Will try again.")
-                await asyncio.sleep(2)
-                continue
+                LOGGER.error("Failed to reach notebook service. Aborting.")
+                raise FailedToWaitForServices(
+                    "Failed to reach notebook service (unable to reach container."
+                )
 
     @staticmethod
     async def _host_port_assigned(container: Container) -> None:
