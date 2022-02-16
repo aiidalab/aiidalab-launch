@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import asyncio
-import logging
 from contextlib import contextmanager
 from dataclasses import dataclass
 from enum import Enum, auto
@@ -186,15 +185,15 @@ class AiidaLabInstance:
 
     def _run_post_start(self) -> None:
         assert self.container is not None
-        logging.debug("Run post-start commands.")
+        LOGGER.debug("Run post-start commands.")
 
-        logging.debug("Ensure ~/.conda directory is owned by the system user.")
+        LOGGER.debug("Ensure ~/.conda directory is owned by the system user.")
         exit_code, _ = self.container.exec_run(
             f"chown -R 1000:1000 /home/{self.profile.system_user}/.conda",
             privileged=True,
         )
         if exit_code != 0:
-            logging.warn(
+            LOGGER.warn(
                 "Failed to ensure ~/.conda directory is owned by the system user."
             )
 
@@ -217,7 +216,7 @@ class AiidaLabInstance:
             try:
                 self.client.volumes.get(self.profile.conda_volume_name()).remove()
             except docker.errors.NotFound:  # already removed
-                logging.debug(
+                LOGGER.debug(
                     f"Failed to remove conda volume '{self.profile.conda_volume_name()}', likely already removed."
                 )
             except Exception as error:  # unexpected error
@@ -269,7 +268,7 @@ class AiidaLabInstance:
     async def _init_scripts_finished(self) -> None:
         assert self.container is not None
         loop = asyncio.get_event_loop()
-        logging.info("Waiting for init services to finish...")
+        LOGGER.info("Waiting for init services to finish...")
         result = await loop.run_in_executor(
             None, self.container.exec_run, "wait-for-services"
         )
@@ -281,7 +280,7 @@ class AiidaLabInstance:
     async def _notebook_service_online(self) -> None:
         assert self.container is not None
         loop = asyncio.get_event_loop()
-        logging.info("Waiting for notebook service to become reachable...")
+        LOGGER.info("Waiting for notebook service to become reachable...")
         while True:
             result = await loop.run_in_executor(
                 None,

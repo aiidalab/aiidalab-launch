@@ -1,5 +1,4 @@
 import asyncio
-import logging
 import re
 import webbrowser
 from contextlib import contextmanager
@@ -14,6 +13,8 @@ import docker
 import requests
 from packaging.version import Version, parse
 from requests_cache import CachedSession
+
+from .core import LOGGER
 
 MSG_UNABLE_TO_COMMUNICATE_WITH_CLIENT = (
     "Unable to communicate with docker on this host. This error usually indicates "
@@ -143,10 +144,10 @@ def get_latest_version(timeout: float = 0.1) -> Optional[Version]:
         )
         return parse(releases[-1]) if releases else None
     except (requests.exceptions.Timeout, requests.exceptions.ReadTimeout):
-        logging.debug("Timed out while requesting latest version.")
+        LOGGER.debug("Timed out while requesting latest version.")
         return None
     except OSError as error:
-        logging.debug(f"Error while requesting latest version: {error}")
+        LOGGER.debug(f"Error while requesting latest version: {error}")
         return None
 
 
