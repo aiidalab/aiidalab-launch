@@ -295,7 +295,8 @@ class AiidaLabInstance:
                 )
             except docker.errors.APIError as error:
                 LOGGER.warning(f"Encountered phantom API error: {error}, continue...")
-                if self._get_container() is None:
+                container = self._get_container()
+                if container is None:
                     raise FailedToWaitForServices(
                         "Container died while curling notebook."
                     )
