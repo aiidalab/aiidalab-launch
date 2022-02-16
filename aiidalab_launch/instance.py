@@ -197,6 +197,7 @@ class AiidaLabInstance:
             LOGGER.warn(
                 "Failed to ensure ~/.conda directory is owned by the system user."
             )
+        LOGGER.debug("The ~/.conda directory is owned by the system user.")
 
     def stop(self, timeout: float | None = None) -> None:
         self._requires_container()
@@ -269,7 +270,7 @@ class AiidaLabInstance:
     async def _init_scripts_finished(self) -> None:
         assert self.container is not None
         loop = asyncio.get_event_loop()
-        LOGGER.info("Waiting for init services to finish...")
+        LOGGER.debug("Waiting for init services to finish...")
         result = await loop.run_in_executor(
             None, self.container.exec_run, "wait-for-services"
         )
@@ -277,11 +278,12 @@ class AiidaLabInstance:
             raise FailedToWaitForServices(
                 "Failed to check for init processes to complete."
             )
+        LOGGER.debug("Init services finished.")
 
     async def _notebook_service_online(self) -> None:
         assert self.container is not None
         loop = asyncio.get_event_loop()
-        LOGGER.info("Waiting for notebook service to become reachable...")
+        LOGGER.debug("Waiting for notebook service to become reachable...")
         while True:
             result = await loop.run_in_executor(
                 None,
@@ -289,6 +291,7 @@ class AiidaLabInstance:
                 "curl --fail-early --fail --silent --max-time 1.0 http://localhost:8888",
             )
             if result.exit_code == 0:
+                LOGGER.debug("Notebook service reachable.")
                 return  # jupyter is online
             elif result.exit_code in (7, 28):
                 await asyncio.sleep(1)  # jupyter not yet reachable
@@ -299,9 +302,11 @@ class AiidaLabInstance:
     async def _host_port_assigned(self) -> None:
         container = self.container
         assert container is not None
+        LOGGER.debug("Waiting for host port to be assigned...")
         while True:
             container.reload()
             if any(_get_host_ports(container)):
+                LOGGER.debug("Host port assigned.")
                 break
             asyncio.sleep(1)
 
