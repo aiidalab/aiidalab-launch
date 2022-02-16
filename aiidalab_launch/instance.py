@@ -293,14 +293,16 @@ class AiidaLabInstance:
                     container.exec_run,
                     "curl --fail-early --fail --silent --max-time 1.0 http://localhost:8888",
                 )
-            if result.exit_code == 0:
-                LOGGER.debug("Notebook service reachable.")
-                return  # jupyter is online
-            elif result.exit_code in (7, 28):
-                await asyncio.sleep(2)  # jupyter not yet reachable
-                continue
+                if result.exit_code == 0:
+                    LOGGER.debug("Notebook service reachable.")
+                    return  # jupyter is online
+                elif result.exit_code in (7, 28):
+                    await asyncio.sleep(2)  # jupyter not yet reachable
+                    continue
+                else:
+                    raise FailedToWaitForServices("Failed to reach notebook service.")
             else:
-                raise FailedToWaitForServices("Failed to reach notebook service.")
+                await asyncio.sleep(2)  # container not running
 
     @staticmethod
     async def _host_port_assigned(container: Container) -> None:
