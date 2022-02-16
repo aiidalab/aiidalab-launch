@@ -287,20 +287,26 @@ class AiidaLabInstance:
         loop = asyncio.get_event_loop()
         LOGGER.debug("Waiting for notebook service to become reachable...")
         while True:
-            LOGGER.debug("Curl notebook...")
-            result = await loop.run_in_executor(
-                None,
-                container.exec_run,
-                "curl --fail-early --fail --silent --max-time 1.0 http://localhost:8888",
-            )
-            if result.exit_code == 0:
-                LOGGER.debug("Notebook service reachable.")
-                return  # jupyter is online
-            elif result.exit_code in (7, 28):
-                await asyncio.sleep(2)  # jupyter not yet reachable
-                continue
-            else:
-                raise FailedToWaitForServices("Failed to reach notebook service.")
+            try:
+                LOGGER.debug("Curl notebook...")
+                result = await loop.run_in_executor(
+                    None,
+                    container.exec_run,
+                    "curl --fail-early --fail --silent --max-time 1.0 http://localhost:8888",
+                )
+                if result.exit_code == 0:
+                    LOGGER.debug("Notebook service reachable.")
+                    return  # jupyter is online
+                elif result.exit_code in (7, 28):
+                    await asyncio.sleep(2)  # jupyter not yet reachable
+                    continue
+                else:
+                    raise FailedToWaitForServices("Failed to reach notebook service.")
+            except docker.errors.APIError:
+                LOGGER.error("Failed to reach notebook service. Aborting.")
+                raise FailedToWaitForServices(
+                    "Failed to reach notebook service (unable to reach container."
+                )
 
     @staticmethod
     async def _host_port_assigned(container: Container) -> None:
