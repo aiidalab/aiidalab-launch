@@ -282,8 +282,7 @@ class AiidaLabInstance:
             )
         LOGGER.debug("Init services finished.")
 
-    @staticmethod
-    async def _notebook_service_online(container: Container) -> None:
+    async def _notebook_service_online(self, container: Container) -> None:
         loop = asyncio.get_event_loop()
         LOGGER.debug("Waiting for notebook service to become reachable...")
         while True:
@@ -296,6 +295,10 @@ class AiidaLabInstance:
                 )
             except docker.errors.APIError as error:
                 LOGGER.warning(f"Encountered phantom API error: {error}, continue...")
+                if self._get_container() is None:
+                    raise FailedToWaitForServices(
+                        "Container died while curling notebook."
+                    )
                 await asyncio.sleep(2)
                 continue
             if result.exit_code == 0:
