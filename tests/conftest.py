@@ -19,6 +19,7 @@ import docker
 import pytest
 
 import aiidalab_launch
+from aiidalab_launch.application_state import ApplicationState
 from aiidalab_launch.config import Config
 from aiidalab_launch.instance import AiidaLabInstance, RequiresContainerInstance
 from aiidalab_launch.profile import Profile
@@ -95,6 +96,11 @@ def app_config_dir(tmp_path_factory, monkeypatch_session):
 @pytest.fixture(scope="class")
 def config():
     return Config()
+
+
+@pytest.fixture(scope="class")
+def application_state(docker_client):
+    return ApplicationState(docker_client=docker_client)
 
 
 @pytest.fixture(scope="class")
