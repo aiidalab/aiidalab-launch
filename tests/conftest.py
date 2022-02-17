@@ -44,7 +44,7 @@ def monkeypatch_session():
     m.undo()
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="class")
 def docker_client():
     try:
         yield docker.from_env()
