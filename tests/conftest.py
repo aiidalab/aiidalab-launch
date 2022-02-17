@@ -158,7 +158,7 @@ def mock_pypi_request(monkeypatch, requests_mock):
     requests_mock.register_uri(
         "GET",
         "https://pypi.python.org/pypi/aiidalab-launch/json",
-        json={"releases": {"2022.1011": [{"yanked": False}]}},
+        json={"releases": {"2022.1010": [{"yanked": False}]}},
     )
 
 
