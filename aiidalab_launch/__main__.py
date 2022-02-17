@@ -394,6 +394,7 @@ async def _async_start(
                     echo_logs = asyncio.create_task(instance.echo_logs())
                     await asyncio.wait_for(instance.wait_for_services(), timeout=wait)
                     echo_logs.cancel()
+                    LOGGER.debug("AiiDAlab instance ready.")
             except asyncio.TimeoutError:
                 raise click.ClickException(
                     f"AiiDAlab instance did not start up within the provided wait period ({wait})."
@@ -404,6 +405,7 @@ async def _async_start(
                     "the container output logs by increasing the output "
                     "verbosity with 'aiidalab-launch -vvv start'."
                 )
+            LOGGER.debug("Preparing startup message.")
             msg_startup = (
                 MSG_STARTUP_SSH
                 if (show_ssh_help or not webbrowser_available())
