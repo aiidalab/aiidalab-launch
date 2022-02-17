@@ -92,9 +92,11 @@ class AiidaLabInstance:
             self._container = self._get_container()
         return self._container
 
-    def _requires_container(self) -> None:
-        if self.container is None:
+    def _requires_container(self) -> Container:
+        container = self.container
+        if container is None:
             raise RequiresContainerInstance
+        return container
 
     def _conda_mount(self) -> docker.types.Mount:
         return docker.types.Mount(
@@ -267,12 +269,12 @@ class AiidaLabInstance:
             async for chunk in logs:
                 LOGGER.debug(f"{self.container.id}: {chunk.decode('utf-8').strip()}")
 
-    async def _init_scripts_finished(self) -> None:
-        assert self.container is not None
+    @staticmethod
+    async def _init_scripts_finished(container: Container) -> None:
         loop = asyncio.get_event_loop()
         LOGGER.debug("Waiting for init services to finish...")
         result = await loop.run_in_executor(
-            None, self.container.exec_run, "wait-for-services"
+            None, container.exec_run, "wait-for-services"
         )
         if result.exit_code != 0:
             raise FailedToWaitForServices(
@@ -280,28 +282,34 @@ class AiidaLabInstance:
             )
         LOGGER.debug("Init services finished.")
 
-    async def _notebook_service_online(self) -> None:
-        assert self.container is not None
+    @staticmethod
+    async def _notebook_service_online(container: Container) -> None:
         loop = asyncio.get_event_loop()
         LOGGER.debug("Waiting for notebook service to become reachable...")
         while True:
-            result = await loop.run_in_executor(
-                None,
-                self.container.exec_run,
-                "curl --fail-early --fail --silent --max-time 1.0 http://localhost:8888",
-            )
-            if result.exit_code == 0:
-                LOGGER.debug("Notebook service reachable.")
-                return  # jupyter is online
-            elif result.exit_code in (7, 28):
-                await asyncio.sleep(1)  # jupyter not yet reachable
-                continue
-            else:
-                raise FailedToWaitForServices("Failed to reach notebook service.")
+            try:
+                LOGGER.debug("Curl notebook...")
+                result = await loop.run_in_executor(
+                    None,
+                    container.exec_run,
+                    "curl --fail-early --fail --silent --max-time 1.0 http://localhost:8888",
+                )
+                if result.exit_code == 0:
+                    LOGGER.debug("Notebook service reachable.")
+                    return  # jupyter is online
+                elif result.exit_code in (7, 28):
+                    await asyncio.sleep(2)  # jupyter not yet reachable
+                    continue
+                else:
+                    raise FailedToWaitForServices("Failed to reach notebook service.")
+            except docker.errors.APIError:
+                LOGGER.error("Failed to reach notebook service. Aborting.")
+                raise FailedToWaitForServices(
+                    "Failed to reach notebook service (unable to reach container."
+                )
 
-    async def _host_port_assigned(self) -> None:
-        container = self.container
-        assert container is not None
+    @staticmethod
+    async def _host_port_assigned(container: Container) -> None:
         LOGGER.debug("Waiting for host port to be assigned...")
         while True:
             container.reload()
@@ -311,18 +319,16 @@ class AiidaLabInstance:
             asyncio.sleep(1)
 
     async def wait_for_services(self) -> None:
-        if self.container is None:
-            raise RuntimeError("Instance was not created.")
-
-        LOGGER.info(f"Waiting for services to come up ({self.container.id})...")
+        container = self._requires_container()
+        LOGGER.info(f"Waiting for services to come up ({container.id})...")
         start = time()
         await asyncio.gather(
-            self._init_scripts_finished(),
-            self._notebook_service_online(),
-            self._host_port_assigned(),
+            self._init_scripts_finished(container),
+            self._notebook_service_online(container),
+            self._host_port_assigned(container),
         )
         LOGGER.info(
-            f"Services came up after {time() - start:.1f} seconds ({self.container.id})."
+            f"Services came up after {time() - start:.1f} seconds ({container.id})."
         )
 
     async def status(self, timeout: float | None = 5.0) -> AiidaLabInstanceStatus:
