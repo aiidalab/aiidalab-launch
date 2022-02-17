@@ -8,6 +8,7 @@ Provide fixtures for all tests.
 """
 import asyncio
 import random
+import re
 import string
 import sys
 from functools import partial
@@ -17,6 +18,8 @@ from typing import Iterator
 import click
 import docker
 import pytest
+import requests
+from requests_mock import ANY
 
 import aiidalab_launch
 from aiidalab_launch.application_state import ApplicationState
@@ -140,6 +143,32 @@ async def started_instance(instance):
         is instance.AiidaLabInstanceStatus.UP
     )
     yield instance
+
+
+@pytest.fixture(autouse=True)
+def _enable_docker_requests(requests_mock):
+    docker_uris = re.compile(r"http\+docker:\/\/")
+    requests_mock.register_uri(ANY, docker_uris, real_http=True)
+
+
+# Do not request package information from PyPI
+@pytest.fixture(autouse=True)
+def mock_pypi_request(monkeypatch, requests_mock):
+    monkeypatch.setattr(aiidalab_launch.util, "SESSION", requests.Session())
+    requests_mock.register_uri(
+        "GET",
+        "https://pypi.python.org/pypi/aiidalab-launch/json",
+        json={"releases": {"2022.1011": [{"yanked": False}]}},
+    )
+
+
+@pytest.fixture
+def mock_pypi_request_timeout(requests_mock):
+    requests_mock.register_uri(
+        "GET",
+        "https://pypi.python.org/pypi/aiidalab-launch/json",
+        exc=requests.exceptions.Timeout,
+    )
 
 
 def pytest_addoption(parser):
