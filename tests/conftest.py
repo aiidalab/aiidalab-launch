@@ -57,6 +57,14 @@ def docker_client():
         pytest.skip("docker not available")
 
 
+@pytest.fixture(scope="session", autouse=True)
+def _pull_docker_image(docker_client):
+    try:
+        docker_client.images.pull(aiidalab_launch.profile._DEFAULT_IMAGE)
+    except docker.errors.APIError:
+        pytest.skip("unable to pull docker image")
+
+
 # Avoid interfering with used ports on the host system.
 @pytest.fixture(scope="session", autouse=True)
 def _default_port(monkeypatch_session):
