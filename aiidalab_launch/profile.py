@@ -96,6 +96,11 @@ class Profile:
             )
 
         system_user = get_docker_env(container, "SYSTEM_USER")
+        if len(container.image.tags) > 1:
+            raise RuntimeError(
+                "Unable to determine profile from container because image has multiple tags."
+            )
+
         return Profile(
             name=profile_name,
             port=_get_configured_host_port(container),
