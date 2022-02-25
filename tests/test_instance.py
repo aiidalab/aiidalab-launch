@@ -33,9 +33,12 @@ def test_instance_pull(instance):
         ).pull()
 
 
-def test_instance_unknown_image(instance):
+def test_instance_unknown_image(instance, invalid_image_id):
     assert (
-        replace(instance, profile=replace(instance.profile, image="abc")).image is None
+        replace(
+            instance, profile=replace(instance.profile, image=invalid_image_id)
+        ).image
+        is None
     )
 
 

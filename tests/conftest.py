@@ -11,6 +11,7 @@ import random
 import re
 import string
 import sys
+import uuid
 from functools import partial
 from pathlib import Path
 from typing import Iterator
@@ -169,6 +170,19 @@ def mock_pypi_request_timeout(requests_mock):
         "https://pypi.python.org/pypi/aiidalab-launch/json",
         exc=requests.exceptions.Timeout,
     )
+
+
+@pytest.fixture(scope="session")
+def invalid_image_id(docker_client):
+    for _ in range(10):  # make 10 attempts
+        image_id = uuid.uuid4().hex
+        try:
+            docker_client.images.get(image_id)
+        except docker.errors.ImageNotFound:
+            yield image_id
+            break
+    else:
+        pytest.xfail("Unable to generate invalid Docker image id.")
 
 
 def pytest_addoption(parser):
