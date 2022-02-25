@@ -19,7 +19,7 @@ async def test_instance_init(instance):
     assert await instance.status() is instance.AiidaLabInstanceStatus.DOWN
 
 
-def test_instance_pull(instance):
+def test_instance_pull(instance, enable_docker_pull):
     assert (
         "hello-world:latest"
         in replace(instance, profile=replace(instance.profile, image="hello-world"))

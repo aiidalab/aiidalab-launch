@@ -190,7 +190,9 @@ class TestInstanceLifecycle:
 
         # Start instance.
         runner: CliRunner = CliRunner()
-        result: Result = runner.invoke(cli.cli, ["start", "--no-browser", "--wait=300"])
+        result: Result = runner.invoke(
+            cli.cli, ["start", "--no-browser", "--no-pull", "--wait=300"]
+        )
         assert result.exit_code == 0
 
         assert_status_up()
@@ -198,7 +200,9 @@ class TestInstanceLifecycle:
         assert get_volume(instance.profile.conda_volume_name())
 
         # Start instance again – should be noop.
-        result: Result = runner.invoke(cli.cli, ["start", "--no-browser", "--wait=300"])
+        result: Result = runner.invoke(
+            cli.cli, ["start", "--no-browser", "--no-pull", "--wait=300"]
+        )
         assert "Container was already running" in result.output.strip()
         assert result.exit_code == 0
         assert_status_up()

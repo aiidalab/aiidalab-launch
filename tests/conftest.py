@@ -185,6 +185,20 @@ def invalid_image_id(docker_client):
         pytest.xfail("Unable to generate invalid Docker image id.")
 
 
+@pytest.fixture(autouse=True)
+def _disable_docker_pull(monkeypatch):
+    def no_pull(self, *args, **kwargs):
+        pytest.skip("Test tried to pull docker image.")
+
+    monkeypatch.setattr(docker.api.image.ImageApiMixin, "pull", no_pull)
+    return monkeypatch
+
+
+@pytest.fixture()
+def enable_docker_pull(_disable_docker_pull):
+    _disable_docker_pull.undo()
+
+
 def pytest_addoption(parser):
     parser.addoption(
         "--slow",
