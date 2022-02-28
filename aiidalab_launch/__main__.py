@@ -340,6 +340,8 @@ async def _async_start(
         InstanceStatus = instance.AiidaLabInstanceStatus  # local alias for brevity
 
         status = await instance.status()
+
+        # Container needs to be started.
         if status in (
             InstanceStatus.DOWN,
             InstanceStatus.CREATED,
@@ -350,6 +352,8 @@ async def _async_start(
                     instance.recreate()
             with spinner("Starting container..."):
                 instance.start()
+
+        # Container is already up.
         elif status is InstanceStatus.UP and restart:
             with spinner("Restarting container..."):
                 if configuration_changed:
@@ -370,8 +374,16 @@ async def _async_start(
                     "Container was already running, use --restart to restart it.",
                     err=True,
                 )
+
+        # Container is already starting.
         elif status is InstanceStatus.STARTING:
             click.echo("Container is already starting up...", err=True)
+
+        # Unknown condition.
+        else:
+            raise RuntimeError(
+                "Container already exists, but failed to determine status."
+            )
 
     except docker.errors.APIError as error:
         LOGGER.debug(f"Error during startup: {error}")
