@@ -29,6 +29,9 @@ def _default_port() -> int:  # explicit function required to enable test patchin
     return DEFAULT_PORT
 
 
+_DEFAULT_IMAGE = "aiidalab/aiidalab-docker-stack:latest"
+
+
 def _get_configured_host_port(container: Container) -> int | None:
     try:
         host_config = container.attrs["HostConfig"]
@@ -51,7 +54,7 @@ class Profile:
     port: int | None = field(default_factory=_default_port)
     default_apps: list[str] = field(default_factory=lambda: ["aiidalab-widgets-base"])
     system_user: str = "aiida"
-    image: str = "aiidalab/aiidalab-docker-stack:latest"
+    image: str = _DEFAULT_IMAGE
     home_mount: str | None = None
 
     def __post_init__(self):
@@ -96,6 +99,13 @@ class Profile:
             )
 
         system_user = get_docker_env(container, "SYSTEM_USER")
+
+        image_tag = (
+            _DEFAULT_IMAGE
+            if _DEFAULT_IMAGE in container.image.tags
+            else container.image.tags[0]
+        )
+
         return Profile(
             name=profile_name,
             port=_get_configured_host_port(container),
@@ -103,6 +113,6 @@ class Profile:
             home_mount=str(
                 docker_mount_for(container, PurePosixPath("/", "home", system_user))
             ),
-            image=container.image.tags[0],
+            image=image_tag,
             system_user=system_user,
         )
