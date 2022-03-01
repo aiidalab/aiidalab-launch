@@ -19,6 +19,7 @@ async def test_instance_init(instance):
     assert await instance.status() is instance.AiidaLabInstanceStatus.DOWN
 
 
+@pytest.mark.slow
 def test_instance_pull(instance, enable_docker_pull):
     assert (
         "hello-world:latest"
