@@ -20,7 +20,7 @@ import click
 import docker
 import pytest
 import requests
-from requests_mock import ANY
+import responses
 
 import aiidalab_launch
 from aiidalab_launch.application_state import ApplicationState
@@ -155,29 +155,49 @@ async def started_instance(instance):
 
 
 @pytest.fixture(autouse=True)
-def _enable_docker_requests(requests_mock):
-    docker_uris = re.compile(r"http\+docker:\/\/")
-    requests_mock.register_uri(ANY, docker_uris, real_http=True)
+def _mocked_responses():
+    "Setup mocker for all HTTP requests."
+    with responses.RequestsMock(assert_all_requests_are_fired=False) as rsps:
+        yield rsps
 
 
-# Do not request package information from PyPI
 @pytest.fixture(autouse=True)
-def mock_pypi_request(monkeypatch, requests_mock):
-    monkeypatch.setattr(aiidalab_launch.util, "SESSION", requests.Session())
-    requests_mock.register_uri(
-        "GET",
-        "https://pypi.python.org/pypi/aiidalab-launch/json",
+def _enable_docker_requests(_mocked_responses):
+    "Pass-through all docker requests."
+    docker_uris = re.compile(r"http\+docker:\/\/")
+    _mocked_responses.add_passthru(docker_uris)
+
+
+@pytest.fixture
+def _pypi_response():
+    "A minimal, but valid PyPI response for this package."
+    return dict(
+        url="https://pypi.python.org/pypi/aiidalab-launch/json",
         json={"releases": {"2022.1010": [{"yanked": False}]}},
     )
 
 
+# Do not request package information from PyPI
+@pytest.fixture(autouse=True)
+def mock_pypi_request(monkeypatch, _mocked_responses, _pypi_response):
+    "Mock the PyPI request."
+    # Need to monkeypatch to prevent caching to interfere with the test.
+    monkeypatch.setattr(aiidalab_launch.util, "SESSION", requests.Session())
+    # Setup the mocked response for PyPI.
+    _mocked_responses.upsert(responses.GET, **_pypi_response)
+
+
 @pytest.fixture
-def mock_pypi_request_timeout(requests_mock):
-    requests_mock.register_uri(
-        "GET",
-        "https://pypi.python.org/pypi/aiidalab-launch/json",
-        exc=requests.exceptions.Timeout,
+def mock_pypi_request_timeout(_mocked_responses, _pypi_response):
+    "Simulate a timeout while trying to reach the PyPI server."
+    # Setup the timeout response.
+    timeout_response = dict(
+        url=_pypi_response["url"], body=requests.exceptions.Timeout()
     )
+    _mocked_responses.upsert(responses.GET, **timeout_response)
+    yield
+    # Restore the valid mocked response for PyPI.
+    _mocked_responses.upsert(responses.GET, **_pypi_response)
 
 
 @pytest.fixture(scope="session")
