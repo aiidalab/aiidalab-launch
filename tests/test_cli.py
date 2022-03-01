@@ -188,7 +188,14 @@ class TestInstanceLifecycle:
             assert "down" in result.output
             assert "http" not in result.output
 
-        # Start instance.
+        # Start instance (non-blocking).
+        runner: CliRunner = CliRunner()
+        result: Result = runner.invoke(
+            cli.cli, ["start", "--no-browser", "--no-pull", "--wait=0"]
+        )
+        assert result.exit_code == 0
+
+        # Start instance again (blocking, should be no-op).
         runner: CliRunner = CliRunner()
         result: Result = runner.invoke(
             cli.cli, ["start", "--no-browser", "--no-pull", "--wait=300"]
