@@ -316,7 +316,7 @@ class AiidaLabInstance:
             if any(_get_host_ports(container)):
                 LOGGER.debug("Host port assigned.")
                 break
-            asyncio.sleep(1)
+            await asyncio.sleep(1)
 
     async def wait_for_services(self) -> None:
         container = self._requires_container()
