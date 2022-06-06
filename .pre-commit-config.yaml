@@ -56,7 +56,7 @@ repos:
             args: [--profile, black, --filter-files]
 
     - repo: https://github.com/sirosen/check-jsonschema
-      rev: 0.15.1
+      rev: 0.16.0
       hooks:
           - id: check-github-workflows
 
