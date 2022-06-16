@@ -5,13 +5,13 @@ from contextlib import contextmanager
 from pathlib import Path, PosixPath, PurePosixPath, WindowsPath
 from textwrap import wrap
 from threading import Event, Thread, Timer
-from typing import Any, AsyncGenerator, Generator, Iterable, Optional, Union
+from typing import Any, AsyncGenerator, Generator, Iterable, Union
 
 import click
 import click_spinner
 import docker
 import requests
-from packaging.version import Version, parse
+from packaging.version import LegacyVersion, Version, parse
 from requests_cache import CachedSession
 
 from .core import LOGGER
@@ -127,7 +127,7 @@ def _async_wrap_iter(it: Iterable) -> AsyncGenerator[Any, None]:
     return yield_queue_items()
 
 
-def get_latest_version(timeout: float = 0.1) -> Optional[Version]:
+def get_latest_version(timeout: float = 0.1) -> Union[LegacyVersion, Version, None]:
     """Determine the latest released version (on PyPI) of this tool."""
     try:
         req = SESSION.get(
