@@ -53,6 +53,8 @@ more detailed instructions on SSH port forwarding.
 
 Home mounted: {home_mount} -> /home/{system_user}"""
 
+MSG_CUSTOM_VOLUME = "Custom volume mounted: {source} -> {target}" ""
+
 
 LOGGING_LEVELS = {
     0: logging.ERROR,
@@ -267,6 +269,7 @@ def set_default_profile(app_state, profile):
         click.echo(f"Set default profile to '{profile}'.")
 
 
+# TODO: Should we check the custom mounts as well?
 async def _find_mount_point_conflict(client, profile, other_profiles):
     """Find running instances with the same home mount point.
 
@@ -437,6 +440,17 @@ async def _async_start(
                 ).lstrip(),
                 fg="green",
             )
+
+            for custom_mount in profile.custom_mounts:
+                source, target = profile.parse_custom_mount(custom_mount)
+                click.secho(
+                    MSG_CUSTOM_VOLUME.format(
+                        source=source,
+                        target=target,
+                    ).lstrip(),
+                    fg="green",
+                )
+
             if not no_browser and webbrowser_available():
                 if click.confirm(
                     "Do you want to open AiiDAlab in the browser now?", default=True

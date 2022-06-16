@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import re
 from dataclasses import asdict, dataclass, field
-from pathlib import PurePosixPath
+from pathlib import Path, PurePosixPath
 from urllib.parse import quote_plus
 
 import toml
@@ -56,6 +56,7 @@ class Profile:
     system_user: str = "aiida"
     image: str = _DEFAULT_IMAGE
     home_mount: str | None = None
+    custom_mounts: list[str] = field(default_factory=lambda: [])
 
     def __post_init__(self):
         if (
@@ -72,6 +73,14 @@ class Profile:
 
     def container_name(self) -> str:
         return f"{CONTAINER_PREFIX}{self.name}"
+
+    def parse_custom_mount(self, custom_mount: str) -> tuple[Path, Path]:
+        # TODO: Add more error handling
+        source, target = custom_mount.split(":")
+        source_path, target_path = Path(source), Path(target)
+        if not source_path.is_dir():
+            raise ValueError("Directory {source} does not exist")
+        return source_path, target_path
 
     def conda_volume_name(self) -> str:
         return f"{self.container_name()}_conda"
@@ -106,6 +115,7 @@ class Profile:
             else container.image.tags[0]
         )
 
+        # TODO: How to detect custom mounts?
         return Profile(
             name=profile_name,
             port=_get_configured_host_port(container),
