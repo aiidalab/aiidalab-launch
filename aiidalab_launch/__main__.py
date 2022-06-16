@@ -585,7 +585,7 @@ def status(app_state):
 
 @cli.command()
 @click.argument("cmd", nargs=-1)
-@click.option("-p", "--privileged", is_flag=True)
+@click.option("--privileged", is_flag=True)
 @click.option("--forward-exit-code", is_flag=True)
 @click.option(
     "--wait/--no-wait",
