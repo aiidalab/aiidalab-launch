@@ -113,12 +113,14 @@ class AiidaLabInstance:
             type="bind" if home_mount_path.is_absolute() else "volume",
         )
 
-    def _custom_mount(self, custom_mount: str) -> docker.types.Mount:
-        assert custom_mount is not None
-        source_path, target_path = self.profile.parse_custom_mount(custom_mount)
+    def _extra_mount(self, extra_mount: str) -> docker.types.Mount:
+        source_path, target_path, read_only = self.profile.parse_extra_mount(
+            extra_mount
+        )
         return docker.types.Mount(
             target=str(target_path),
             source=str(source_path),
+            read_only=True if read_only in ("ro", "readonly") else False,
             type="bind" if source_path.is_absolute() else "volume",
         )
 
@@ -126,8 +128,8 @@ class AiidaLabInstance:
         yield self._conda_mount()
         if self.profile.home_mount:
             yield self._home_mount()
-        for custom_mount in self.profile.custom_mounts:
-            yield self._custom_mount(custom_mount)
+        for extra_mount in self.profile.extra_mounts:
+            yield self._extra_mount(extra_mount)
 
     def configuration_changes(self) -> Generator[str, None, None]:
         self._requires_container()

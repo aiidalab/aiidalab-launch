@@ -53,7 +53,7 @@ more detailed instructions on SSH port forwarding.
 
 Home mounted: {home_mount} -> /home/{system_user}"""
 
-MSG_CUSTOM_VOLUME = "Custom volume mounted: {source} -> {target}" ""
+MSG_CUSTOM_VOLUME = "Extra volume mounted: {source} -> {target} {mode}"
 
 
 LOGGING_LEVELS = {
@@ -269,7 +269,6 @@ def set_default_profile(app_state, profile):
         click.echo(f"Set default profile to '{profile}'.")
 
 
-# TODO: Should we check the custom mounts as well?
 async def _find_mount_point_conflict(client, profile, other_profiles):
     """Find running instances with the same home mount point.
 
@@ -441,12 +440,13 @@ async def _async_start(
                 fg="green",
             )
 
-            for custom_mount in profile.custom_mounts:
-                source, target = profile.parse_custom_mount(custom_mount)
+            for extra_mount in profile.extra_mounts:
+                source, target, mode = profile.parse_extra_mount(extra_mount)
                 click.secho(
                     MSG_CUSTOM_VOLUME.format(
                         source=source,
                         target=target,
+                        mode=f"({mode})" if mode else "",
                     ).lstrip(),
                     fg="green",
                 )

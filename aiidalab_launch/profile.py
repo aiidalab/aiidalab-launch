@@ -56,7 +56,7 @@ class Profile:
     system_user: str = "aiida"
     image: str = _DEFAULT_IMAGE
     home_mount: str | None = None
-    custom_mounts: list[str] = field(default_factory=lambda: [])
+    extra_mounts: list[str] = field(default_factory=list)
 
     def __post_init__(self):
         if (
@@ -74,13 +74,26 @@ class Profile:
     def container_name(self) -> str:
         return f"{CONTAINER_PREFIX}{self.name}"
 
-    def parse_custom_mount(self, custom_mount: str) -> tuple[Path, Path]:
-        # TODO: Add more error handling
-        source, target = custom_mount.split(":")
-        source_path, target_path = Path(source), Path(target)
-        if not source_path.is_dir():
-            raise ValueError("Directory {source} does not exist")
-        return source_path, target_path
+    def parse_extra_mount(
+        self, extra_mount: str
+    ) -> tuple[Path, PurePosixPath, str | None]:
+        fields = extra_mount.split(":")
+        if len(fields) < 2 or len(fields) > 3:
+            raise ValueError(f"Invalid extra mount option '{extra_mount}'")
+
+        source, target = fields[:2]
+        source_path, target_path = Path(source), PurePosixPath(target)
+        if source_path.is_absolute() and not source_path.exists():
+            raise ValueError(f"Directory {source} does not exist")
+
+        read_only = fields[2] if len(fields) == 3 else None
+        # For now, we only support readonly option, although in principle
+        # this could be a comma-separated list of options per:
+        # https://docs.docker.com/storage/bind-mounts/#choose-the--v-or---mount-flag
+        if read_only is not None and read_only not in ("ro", "readonly"):
+            raise ValueError(f"Invalid extra mount option {read_only}")
+
+        return source_path, target_path, read_only
 
     def conda_volume_name(self) -> str:
         return f"{self.container_name()}_conda"
@@ -115,7 +128,8 @@ class Profile:
             else container.image.tags[0]
         )
 
-        # TODO: How to detect custom mounts?
+        # TODO: Detect extra mounts
+        extra_mounts: list[str] = []
         return Profile(
             name=profile_name,
             port=_get_configured_host_port(container),
@@ -125,4 +139,5 @@ class Profile:
             ),
             image=image_tag,
             system_user=system_user,
+            extra_mounts=extra_mounts,
         )
