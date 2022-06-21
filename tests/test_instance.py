@@ -122,12 +122,6 @@ async def test_profile_configuration_changes(instance):
     instance.profile = deepcopy(original_profile)
     assert not any(instance.configuration_changes())
 
-    # Regression test for bind mounts
-    instance.profile.home_mount = f"{Path.home()}/aiidalab_test"
-    instance.recreate()
-    assert await instance.status() is instance.AiidaLabInstanceStatus.CREATED
-    assert not any(instance.configuration_changes())
-
 
 def test_instance_url_before_start(instance):
     with pytest.raises(RequiresContainerInstance):
