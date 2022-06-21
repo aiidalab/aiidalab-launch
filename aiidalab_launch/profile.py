@@ -10,7 +10,7 @@ from urllib.parse import quote_plus
 import toml
 from docker.models.containers import Container
 
-from .util import docker_mount_for, get_docker_env
+from .util import docker_mount_for, get_docker_env, is_volume_readonly
 
 MAIN_PROFILE_NAME = "default"
 
@@ -71,6 +71,12 @@ class Profile:
         if self.home_mount is None:
             self.home_mount = f"{CONTAINER_PREFIX}{self.name}_home"
 
+        # Normalize read_only option for extra mounts: "ro" -> "readonly"
+        for i, extra_mount in enumerate(self.extra_mounts):
+            src, target, read_only = self.parse_extra_mount(extra_mount)
+            if read_only == "ro":
+                self.extra_mounts[i] = re.sub(r":ro$", ":readonly", extra_mount)
+
     def container_name(self) -> str:
         return f"{CONTAINER_PREFIX}{self.name}"
 
@@ -128,8 +134,20 @@ class Profile:
             else container.image.tags[0]
         )
 
-        # TODO: Detect extra mounts
+        extra_destinations: list[PurePosixPath] = [
+            PurePosixPath(mount["Destination"])
+            for mount in container.attrs["Mounts"]
+            if mount["Destination"]
+            not in (f"/home/{system_user}/.conda", f"/home/{system_user}")
+        ]
         extra_mounts: list[str] = []
+        for dst in extra_destinations:
+            src = docker_mount_for(container, dst)
+            if is_volume_readonly(container, dst):
+                extra_mounts.append(":".join([str(src), str(dst), "readonly"]))
+            else:
+                extra_mounts.append(":".join([str(src), str(dst)]))
+
         return Profile(
             name=profile_name,
             port=_get_configured_host_port(container),
