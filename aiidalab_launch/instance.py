@@ -141,10 +141,7 @@ class AiidaLabInstance:
 
         try:
             for mount in self._mounts():
-                if (
-                    str(docker_mount_for(self.container, mount["Target"]))
-                    != mount["Source"]
-                ):
+                if docker_mount_for(self.container, mount["Target"]) != mount["Source"]:
                     raise ValueError
         except ValueError:
             yield "Mount configuration has changed."
