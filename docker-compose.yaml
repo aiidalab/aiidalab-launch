@@ -40,8 +40,9 @@ services:
             RMQHOST: messaging
             TZ: Europe/Zurich
             DOCKER_STACKS_JUPYTER_CMD: notebook
+            #AIIDALAB_DEFAULT_APPS: "aiidalab-widgets-base"
         volumes:
-            - aiidalab-home-folder:/home/aiida
+            - aiidalab-home-folder:/home/jovyan
       # optional
       # - "aiida-python-venv:/opt/venv"
       # - "./.bash_history:/home/aiida/.bash_history"
@@ -60,4 +61,3 @@ volumes:
         name: aiida-rmq-data
     aiidalab-home-folder:
         name: aiidalab-home-folder
-  # aiida-python-venv:
