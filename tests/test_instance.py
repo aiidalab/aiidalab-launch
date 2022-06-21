@@ -73,6 +73,7 @@ async def test_instance_home_bind_mount(instance):
     instance.create()
     assert await instance.status() is instance.AiidaLabInstanceStatus.CREATED
     assert instance.profile == Profile.from_container(instance.container)
+    assert not any(instance.configuration_changes())
 
 
 async def test_profile_configuration_changes(instance):
@@ -119,6 +120,12 @@ async def test_profile_configuration_changes(instance):
     instance.profile.home_mount = "some_other_volume"
     assert "Profile configuration has changed." in instance.configuration_changes()
     instance.profile = deepcopy(original_profile)
+    assert not any(instance.configuration_changes())
+
+    # Regression test for bind mounts
+    instance.profile.home_mount = f"{Path.home()}/aiidalab_test"
+    instance.recreate()
+    assert await instance.status() is instance.AiidaLabInstanceStatus.CREATED
     assert not any(instance.configuration_changes())
 
 
