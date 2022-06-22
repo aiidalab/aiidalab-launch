@@ -73,6 +73,7 @@ async def test_instance_home_bind_mount(instance):
     instance.create()
     assert await instance.status() is instance.AiidaLabInstanceStatus.CREATED
     assert instance.profile == Profile.from_container(instance.container)
+    assert not any(instance.configuration_changes())
 
 
 async def test_profile_configuration_changes(instance):
