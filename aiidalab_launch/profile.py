@@ -71,11 +71,12 @@ class Profile:
         if self.home_mount is None:
             self.home_mount = f"{CONTAINER_PREFIX}{self.name}_home"
 
-        # Normalize read_only option for extra mounts: "ro" -> "readonly"
+        # Normalize extra mount mode to be "rw" by default
+        # so that we match Docker default but are explicit.
         for i, extra_mount in enumerate(self.extra_mounts):
-            src, target, read_only = self.parse_extra_mount(extra_mount)
-            if read_only == "ro":
-                self.extra_mounts[i] = re.sub(r":ro$", ":readonly", extra_mount)
+            if len(extra_mount.split(":")) == 2:
+                self.extra_mounts[i] = f"{extra_mount}:rw"
+            self.parse_extra_mount(self.extra_mounts[i])
 
     def container_name(self) -> str:
         return f"{CONTAINER_PREFIX}{self.name}"
@@ -90,16 +91,23 @@ class Profile:
         source, target = fields[:2]
         source_path, target_path = Path(source), PurePosixPath(target)
         if source_path.is_absolute() and not source_path.exists():
-            raise ValueError(f"Directory {source} does not exist")
+            raise ValueError(f"Directory '{source}' does not exist")
 
-        read_only = fields[2] if len(fields) == 3 else None
-        # For now, we only support readonly option, although in principle
-        # this could be a comma-separated list of options per:
-        # https://docs.docker.com/storage/bind-mounts/#choose-the--v-or---mount-flag
-        if read_only is not None and read_only not in ("ro", "readonly"):
-            raise ValueError(f"Invalid extra mount option {read_only}")
+        # We do not allow relative paths so if the path is not absolute,
+        # we assume volume mount, whose name is restricted by Docker.
+        if not source_path.is_absolute() and not re.match(
+            r"[a-zA-Z0-9][a-zA-Z0-9_.-]+$", source
+        ):
+            raise ValueError(
+                f"Invalid extra mount volume name '{source}'. Use absolute path for bind mounts."
+            )
 
-        return source_path, target_path, read_only
+        # By default, extra mounts are writeable
+        mode = fields[2] if len(fields) == 3 else "rw"
+        if mode not in ("ro", "rw"):
+            raise ValueError(f"Invalid extra mount mode '{mode}'")
+
+        return source_path, target_path, mode
 
     def conda_volume_name(self) -> str:
         return f"{self.container_name()}_conda"
@@ -144,9 +152,9 @@ class Profile:
         for dst in extra_destinations:
             src = docker_mount_for(container, dst)
             if is_volume_readonly(container, dst):
-                extra_mounts.append(":".join([str(src), str(dst), "readonly"]))
+                extra_mounts.append(":".join([str(src), str(dst), "ro"]))
             else:
-                extra_mounts.append(":".join([str(src), str(dst)]))
+                extra_mounts.append(":".join([str(src), str(dst), "rw"]))
 
         return Profile(
             name=profile_name,
