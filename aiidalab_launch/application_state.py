@@ -72,7 +72,7 @@ class ApplicationState:
             config_changed = True
 
         # No version string stored in config.
-        if self.config.version is None:
+        if self.config.version != str(parse(__version__)):
             self.config.version = str(parse(__version__))
             config_changed = True
 
