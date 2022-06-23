@@ -5,27 +5,25 @@ import pytest
 
 from aiidalab_launch.profile import Profile
 
-tmpdir = Path.home()
-tmpvol = "aiidalab-launch_tests_volume"
 VALID_PROFILE_NAMES = ["abc", "Abc", "aBC", "a0", "a-a", "a-0"]
 
 INVALID_PROFILE_NAMES = ["", ".a", "a_a", "_a"]
 
 VALID_EXTRA_MOUNTS = [
-    f"{tmpdir}:/opt/test",
-    f"{tmpdir}:/opt/test:ro",
-    f"{tmpdir}:/opt/test:rw",
-    f"{tmpvol}:/opt/test:ro",
-    f"{tmpvol}:/opt/test:ro",
+    "{dir}:/opt/test",
+    "{dir}:/opt/test:ro",
+    "{dir}:/opt/test:rw",
+    "{vol}:/opt/test:ro",
+    "{vol}:/opt/test:ro",
 ]
 
 INVALID_EXTRA_MOUNTS = [
-    f"./relative/{tmpdir}:/opt/test:ro",
-    f"{tmpdir}:/opt/test:invalid_mode",
+    "./relative/{dir}:/opt/test:ro",
+    "{dir}:/opt/test:invalid_mode",
     "invalidchar@:/opt/test:ro",
-    f"{tmpvol}:/opt/test:ro:extraarg",
-    f"{tmpvol}",
-    f"{tmpdir}/nonexistent:/opt/test",
+    "{vol}:/opt/test:ro:extraarg",
+    "{vol}",
+    "{dir}/nonexistent:/opt/test",
     "x:/opt/test/:ro",
 ]
 
@@ -46,8 +44,8 @@ def test_profile_init_invalid_names(profile, name):
 
 
 @pytest.mark.parametrize("extra_mount", VALID_EXTRA_MOUNTS)
-def test_profile_init_valid_extra_mounts(profile, extra_mount):
-    extra_mounts = [extra_mount]
+def test_profile_init_valid_extra_mounts(profile, volume_name, extra_mount):
+    extra_mounts = [extra_mount.format(dir=Path.home(), vol=volume_name)]
     assert replace(profile, extra_mounts=extra_mounts).extra_mounts == extra_mounts
 
 
