@@ -76,6 +76,17 @@ async def test_instance_home_bind_mount(instance):
     assert not any(instance.configuration_changes())
 
 
+async def test_instance_extra_mount(instance, volume_name):
+    instance.profile.extra_mounts = [
+        f"{volume_name}:/opt/extra_volume_mount:rw",
+        f"{Path.home()}:/opt/extra_bind_mount:ro",
+    ]
+    instance.create()
+    assert await instance.status() is instance.AiidaLabInstanceStatus.CREATED
+    assert instance.profile == Profile.from_container(instance.container)
+    assert not any(instance.configuration_changes())
+
+
 async def test_profile_configuration_changes(instance):
     original_profile = deepcopy(instance.profile)
 

@@ -90,7 +90,7 @@ def _container_prefix(_random_token, monkeypatch_session):
 # Avoid interfering with volumes on the host system.
 @pytest.fixture(scope="class", autouse=True)
 def volume_name(_random_token):
-    yield f"aiidalab-launch_tests_{_random_token}_"
+    yield f"aiidalab-launch_tests_{_random_token}"
 
 
 # Avoid accidentally reading or writing from the host home directory.
