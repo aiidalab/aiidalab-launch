@@ -8,12 +8,12 @@ To avoid expending unnecessary effort, please make sure to create an issue for a
 
 ## Testing
 
-All tests are ocated within the `tests/` directory and implemented with the [pytest framework](https://pytest.org/).
+All tests are located within the `tests/` directory and implemented with the [pytest framework](https://pytest.org/).
 
 Most modules have a corresponding test module (e.g. `aiidalab_launch/instance.py` and `tests/test_instance.py`) which contain unit and integration tests related to that module.
 
 We use the [pytest fixture system](https://docs.pytest.org/en/7.1.x/explanation/fixtures.html#about-fixtures) to create an isolated environment such that the user's actual configuration and docker environment (if available) are not affected.
-For example, we ensure that we monkepyatch the `Path.home()` function to not point to the actual home directory with the [`home_path` fixture](https://github.com/aiidalab/aiidalab-launch/blob/73fe854e525d1c0adfa1f92b1aa97842df5a5c16/tests/conftest.py#L90-L95).
+For example, we ensure that we monkeypatch the `Path.home()` function to not point to the actual home directory with the [`home_path` fixture](https://github.com/aiidalab/aiidalab-launch/blob/73fe854e525d1c0adfa1f92b1aa97842df5a5c16/tests/conftest.py#L90-L95).
 
 Most fixtures that protect the user's environment are class-scoped and auto-used.
 This means that they will be automatically applied even if not explicitly requested and that they can be persisted by grouping multiple tests into a test class.
