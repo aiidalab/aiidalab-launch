@@ -69,6 +69,10 @@ A. V. Yakutovich et al., Comp. Mat. Sci. 188, 110165 (2021).
 
 aiidalab@materialscloud.org
 
+## Contributions
+
+Contributions in any form are very welcome.
+Please see [CONTRIBUTING.md](CONTRIBUTING.md) for contribution guidelines.
 ## For maintainers
 
 To create a new release, clone the repository, install development dependencies with `pip install -e '.[dev]'`, and then execute `bumpver update`.
