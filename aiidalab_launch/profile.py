@@ -68,7 +68,7 @@ class Profile:
     system_user: str = "aiida"
     image: str = _DEFAULT_IMAGE
     home_mount: str | None = None
-    extra_mounts: list[str] = field(default_factory=list)
+    extra_mounts: set[str] = field(default_factory=set)
 
     def __post_init__(self):
         if (
@@ -87,10 +87,11 @@ class Profile:
 
         # Normalize extra mount mode to be "rw" by default
         # so that we match Docker default but are explicit.
-        for i, extra_mount in enumerate(self.extra_mounts):
+        for extra_mount in self.extra_mounts:
+            self.parse_extra_mount(extra_mount)
             if len(extra_mount.split(":")) == 2:
-                self.extra_mounts[i] = f"{extra_mount}:rw"
-            self.parse_extra_mount(self.extra_mounts[i])
+                self.extra_mounts.remove(extra_mount)
+                self.extra_mounts.add(f"{extra_mount}:rw")
 
     def container_name(self) -> str:
         return f"{CONTAINER_PREFIX}{self.name}"
@@ -133,7 +134,9 @@ class Profile:
 
     @classmethod
     def loads(cls, name: str, s: str) -> Profile:
-        return cls(name=name, **toml.loads(s))
+        params = toml.loads(s)
+        params["extra_mounts"] = set(params["extra_mounts"])
+        return cls(name=name, **params)
 
     @classmethod
     def from_container(cls, container: Container) -> Profile:
@@ -157,13 +160,13 @@ class Profile:
             if mount["Destination"]
             not in (f"/home/{system_user}/.conda", f"/home/{system_user}")
         ]
-        extra_mounts: list[str] = []
+        extra_mounts: set[str] = set()
         for dst in extra_destinations:
             src = docker_mount_for(container, dst)
             if is_volume_readonly(container, dst):
-                extra_mounts.append(":".join([str(src), str(dst), "ro"]))
+                extra_mounts.add(":".join([str(src), str(dst), "ro"]))
             else:
-                extra_mounts.append(":".join([str(src), str(dst), "rw"]))
+                extra_mounts.add(":".join([str(src), str(dst), "rw"]))
 
         return Profile(
             name=profile_name,

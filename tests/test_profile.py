@@ -63,13 +63,13 @@ def test_profile_init_invalid_home_mounts(profile, random_volume_name, home_moun
 
 @pytest.mark.parametrize("extra_mount", VALID_EXTRA_MOUNTS)
 def test_profile_init_valid_extra_mounts(profile, random_volume_name, extra_mount):
-    extra_mounts = [extra_mount.format(path=Path.home(), vol=random_volume_name)]
+    extra_mounts = {extra_mount.format(path=Path.home(), vol=random_volume_name)}
     assert replace(profile, extra_mounts=extra_mounts).extra_mounts == extra_mounts
 
 
 @pytest.mark.parametrize("extra_mount", INVALID_EXTRA_MOUNTS)
 def test_profile_init_invalid_extra_mounts(profile, random_volume_name, extra_mount):
-    extra_mounts = [extra_mount.format(path=Path.home(), vol=random_volume_name)]
+    extra_mounts = {extra_mount.format(path=Path.home(), vol=random_volume_name)}
     with pytest.raises(ValueError):
         replace(profile, extra_mounts=extra_mounts)
 
