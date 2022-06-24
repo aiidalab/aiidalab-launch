@@ -165,7 +165,9 @@ class TestsAgainstStartedInstance:
 @pytest.mark.slow
 @pytest.mark.trylast
 class TestInstanceLifecycle:
-    def test_start_stop_reset(self, instance, docker_client, volume_name, caplog):
+    def test_start_stop_reset(
+        self, instance, docker_client, random_volume_name, caplog
+    ):
         caplog.set_level(logging.DEBUG)
 
         def get_volume(volume_name):
@@ -189,8 +191,8 @@ class TestInstanceLifecycle:
             assert "http" not in result.output
 
         extra_mounts = [
-            f"{volume_name}:/test:ro",
-            f"{volume_name}2:/test2:rw",
+            f"{random_volume_name}:/test:ro",
+            f"{random_volume_name}2:/test2:rw",
         ]
         instance.profile.extra_mounts = extra_mounts
 
