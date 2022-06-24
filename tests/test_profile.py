@@ -19,6 +19,7 @@ VALID_EXTRA_MOUNTS = [
 
 INVALID_EXTRA_MOUNTS = [
     "./relative/{dir}:/opt/test:ro",
+    "/nonexistent/{dir}:/opt/test:ro",
     "{dir}:/opt/test:invalid_mode",
     "invalidchar@:/opt/test:ro",
     "{vol}:/opt/test:ro:extraarg",
@@ -50,9 +51,10 @@ def test_profile_init_valid_extra_mounts(profile, volume_name, extra_mount):
 
 
 @pytest.mark.parametrize("extra_mount", INVALID_EXTRA_MOUNTS)
-def test_profile_init_invalid_extra_mounts(profile, extra_mount):
+def test_profile_init_invalid_extra_mounts(profile, volume_name, extra_mount):
+    extra_mounts = [extra_mount.format(dir=Path.home(), vol=volume_name)]
     with pytest.raises(ValueError):
-        replace(profile, extra_mounts=[extra_mount])
+        replace(profile, extra_mounts=extra_mounts)
 
 
 def test_profile_equality(profile):
