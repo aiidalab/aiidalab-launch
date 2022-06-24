@@ -10,7 +10,12 @@ from urllib.parse import quote_plus
 import toml
 from docker.models.containers import Container
 
-from .util import docker_mount_for, get_docker_env, is_volume_readonly
+from .util import (
+    docker_mount_for,
+    get_docker_env,
+    is_volume_readonly,
+    valid_volume_name,
+)
 
 MAIN_PROFILE_NAME = "default"
 
@@ -71,6 +76,8 @@ class Profile:
         if self.home_mount is None:
             self.home_mount = f"{CONTAINER_PREFIX}{self.name}_home"
 
+        valid_volume_name(self.home_mount)
+
         # Normalize extra mount mode to be "rw" by default
         # so that we match Docker default but are explicit.
         for i, extra_mount in enumerate(self.extra_mounts):
@@ -89,18 +96,13 @@ class Profile:
             raise ValueError(f"Invalid extra mount option '{extra_mount}'")
 
         source, target = fields[:2]
+        valid_volume_name(source)
+
         source_path, target_path = Path(source), PurePosixPath(target)
+        # Unlike for home_mount, we will not auto-create missing
+        # directories for extra mounts.
         if source_path.is_absolute() and not source_path.exists():
             raise ValueError(f"Directory '{source}' does not exist")
-
-        # We do not allow relative paths so if the path is not absolute,
-        # we assume volume mount, whose name is restricted by Docker.
-        if not source_path.is_absolute() and not re.match(
-            r"[a-zA-Z0-9][a-zA-Z0-9_.-]+$", source
-        ):
-            raise ValueError(
-                f"Invalid extra mount volume name '{source}'. Use absolute path for bind mounts."
-            )
 
         # By default, extra mounts are writeable
         mode = fields[2] if len(fields) == 3 else "rw"

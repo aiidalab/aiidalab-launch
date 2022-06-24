@@ -9,6 +9,10 @@ VALID_PROFILE_NAMES = ["abc", "Abc", "aBC", "a0", "a-a", "a-0"]
 
 INVALID_PROFILE_NAMES = ["", ".a", "a_a", "_a"]
 
+VALID_HOME_MOUNTS = ["{vol}", "{path}", "{path}/home"]
+
+INVALID_HOME_MOUNTS = ["@{vol}", "./{path}"]
+
 VALID_EXTRA_MOUNTS = [
     "{path}:/opt/test",
     "{path}:/opt/test:ro",
@@ -42,6 +46,19 @@ def test_profile_init_valid_names(profile, name):
 def test_profile_init_invalid_names(profile, name):
     with pytest.raises(ValueError):
         replace(profile, name=name)
+
+
+@pytest.mark.parametrize("home_mount", VALID_HOME_MOUNTS)
+def test_profile_init_valid_home_mounts(profile, random_volume_name, home_mount):
+    home_mount = home_mount.format(path=Path.home(), vol=random_volume_name)
+    assert replace(profile, home_mount=home_mount).home_mount == home_mount
+
+
+@pytest.mark.parametrize("home_mount", INVALID_HOME_MOUNTS)
+def test_profile_init_invalid_home_mounts(profile, random_volume_name, home_mount):
+    home_mount = home_mount.format(path=Path.home(), vol=random_volume_name)
+    with pytest.raises(ValueError):
+        replace(profile, home_mount=home_mount)
 
 
 @pytest.mark.parametrize("extra_mount", VALID_EXTRA_MOUNTS)
