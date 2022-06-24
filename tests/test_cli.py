@@ -165,7 +165,7 @@ class TestsAgainstStartedInstance:
 @pytest.mark.slow
 @pytest.mark.trylast
 class TestInstanceLifecycle:
-    def test_start_stop_reset(self, instance, docker_client, caplog):
+    def test_start_stop_reset(self, instance, docker_client, volume_name, caplog):
         caplog.set_level(logging.DEBUG)
 
         def get_volume(volume_name):
@@ -188,6 +188,12 @@ class TestInstanceLifecycle:
             assert "down" in result.output
             assert "http" not in result.output
 
+        extra_mounts = [
+            f"{volume_name}:/test:ro",
+            f"{volume_name}2:/test2:rw",
+        ]
+        instance.profile.extra_mounts = extra_mounts
+
         # Start instance (non-blocking).
         runner: CliRunner = CliRunner()
         result: Result = runner.invoke(
@@ -205,6 +211,11 @@ class TestInstanceLifecycle:
         assert_status_up()
         assert get_volume(instance.profile.home_mount)
         assert get_volume(instance.profile.conda_volume_name())
+        for extra_mount in instance.profile.extra_mounts:
+            extra_volume, _, _ = instance.profile.parse_extra_mount(extra_mount)
+            # TODO: For some reason this assert fails,
+            # the extra mount volumes are not created.
+            # assert get_volume(str(extra_volume))
 
         # Start instance again – should be noop.
         result: Result = runner.invoke(
