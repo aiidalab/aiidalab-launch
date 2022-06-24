@@ -10,12 +10,7 @@ from urllib.parse import quote_plus
 import toml
 from docker.models.containers import Container
 
-from .util import (
-    docker_mount_for,
-    get_docker_env,
-    is_volume_readonly,
-    valid_volume_name,
-)
+from .util import docker_mount_for, get_docker_env, is_volume_readonly
 
 MAIN_PROFILE_NAME = "default"
 
@@ -23,9 +18,10 @@ CONTAINER_PREFIX = "aiidalab_"
 
 DEFAULT_PORT = 8888
 
-# Regular expression for valid container names as of Docker version 20.10.11:
-# [a-zA-Z0-9][a-zA-Z0-9_.-]
-# In addition we do not allow underscores to avoid potential issues with moving
+# Regular expression for valid container and image names as of Docker version 20.10.11:
+# [a-zA-Z0-9][a-zA-Z0-9_.-]+
+_REGEX_VALID_IMAGE_NAMES = r"[a-zA-Z0-9][a-zA-Z0-9_.-]+"
+# For profiles in addition we do not allow underscores to avoid potential issues with moving
 # to a docker-compose based implementation of aiidalab-launch in the future.
 _REGEX_VALID_PROFILE_NAMES = r"[a-zA-Z0-9][a-zA-Z0-9.-]+"
 
@@ -35,6 +31,17 @@ def _default_port() -> int:  # explicit function required to enable test patchin
 
 
 _DEFAULT_IMAGE = "aiidalab/aiidalab-docker-stack:latest"
+
+
+def _valid_volume_name(source: str) -> None:
+    # We do not allow relative paths so if the path is not absolute,
+    # we assume volume mount, whose name is restricted by Docker.
+    if not Path(source).is_absolute() and not re.fullmatch(
+        _REGEX_VALID_IMAGE_NAMES, source
+    ):
+        raise ValueError(
+            f"Invalid extra mount volume name '{source}'. Use absolute path for bind mounts."
+        )
 
 
 def _get_configured_host_port(container: Container) -> int | None:
@@ -76,7 +83,7 @@ class Profile:
         if self.home_mount is None:
             self.home_mount = f"{CONTAINER_PREFIX}{self.name}_home"
 
-        valid_volume_name(self.home_mount)
+        _valid_volume_name(self.home_mount)
 
         # Normalize extra mount mode to be "rw" by default
         # so that we match Docker default but are explicit.
@@ -96,7 +103,7 @@ class Profile:
             raise ValueError(f"Invalid extra mount option '{extra_mount}'")
 
         source, target = fields[:2]
-        valid_volume_name(source)
+        _valid_volume_name(source)
 
         source_path, target_path = Path(source), PurePosixPath(target)
         # Unlike for home_mount, we will not auto-create missing

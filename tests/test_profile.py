@@ -7,7 +7,7 @@ from aiidalab_launch.profile import Profile
 
 VALID_PROFILE_NAMES = ["abc", "Abc", "aBC", "a0", "a-a", "a-0"]
 
-INVALID_PROFILE_NAMES = ["", ".a", "a_a", "_a"]
+INVALID_PROFILE_NAMES = ["", ".a", "a_a", "_a", "aaa_"]
 
 VALID_HOME_MOUNTS = ["{vol}", "{path}", "{path}/home"]
 

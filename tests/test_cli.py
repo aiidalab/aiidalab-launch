@@ -190,12 +190,6 @@ class TestInstanceLifecycle:
             assert "down" in result.output
             assert "http" not in result.output
 
-        extra_mounts = [
-            f"{random_volume_name}:/test:ro",
-            f"{random_volume_name}2:/test2:rw",
-        ]
-        instance.profile.extra_mounts = extra_mounts
-
         # Start instance (non-blocking).
         runner: CliRunner = CliRunner()
         result: Result = runner.invoke(
@@ -215,9 +209,9 @@ class TestInstanceLifecycle:
         assert get_volume(instance.profile.conda_volume_name())
         for extra_mount in instance.profile.extra_mounts:
             extra_volume, _, _ = instance.profile.parse_extra_mount(extra_mount)
-            # TODO: For some reason this assert fails,
-            # the extra mount volumes are not created.
-            # assert get_volume(str(extra_volume))
+            # NOTE: Currently we do not have extra mounts
+            # in the default config so this assert is never reached
+            assert get_volume(str(extra_volume))
 
         # Start instance again – should be noop.
         result: Result = runner.invoke(

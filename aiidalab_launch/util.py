@@ -160,17 +160,6 @@ def confirm_with_value(value: str, text: str, abort: bool = False) -> bool:
         return False
 
 
-def valid_volume_name(source: str) -> None:
-    # We do not allow relative paths so if the path is not absolute,
-    # we assume volume mount, whose name is restricted by Docker.
-    if not Path(source).is_absolute() and not re.match(
-        r"[a-zA-Z0-9][a-zA-Z0-9_.-]+$", source
-    ):
-        raise ValueError(
-            f"Invalid extra mount volume name '{source}'. Use absolute path for bind mounts."
-        )
-
-
 def get_docker_mount(
     container: docker.models.containers.Container, destination: PurePosixPath
 ) -> docker.types.Mount:
