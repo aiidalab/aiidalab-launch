@@ -4,6 +4,20 @@ import pytest
 
 from aiidalab_launch.config import Config
 
+CONFIGS = {
+    "2022.1012": """
+        default_profile = "default"
+        version = "2022.1012"
+
+        [profiles.default]
+        port = 8888
+        default_apps = [ "aiidalab-widgets-base",]
+        system_user = "aiida"
+        image = "aiidalab/aiidalab-docker-stack:latest"
+        home_mount = "aiidalab_default_home"
+        """
+}
+
 
 def test_config_version(config):
     assert config.version is None
@@ -26,3 +40,8 @@ def test_config_dumps_loads(config):
 def test_config_save(tmp_path, config, safe):
     config.save(tmp_path / "config.json", safe=safe)
     assert Config.load(tmp_path / "config.json") == config
+
+
+@pytest.mark.parametrize("config_version", list(CONFIGS))
+def test_config_loads_valid_configs(config_version):
+    Config.loads(CONFIGS[config_version])
