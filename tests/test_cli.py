@@ -165,9 +165,7 @@ class TestsAgainstStartedInstance:
 @pytest.mark.slow
 @pytest.mark.trylast
 class TestInstanceLifecycle:
-    def test_start_stop_reset(
-        self, instance, docker_client, random_volume_name, caplog
-    ):
+    def test_start_stop_reset(self, instance, docker_client, caplog):
         caplog.set_level(logging.DEBUG)
 
         def get_volume(volume_name):
@@ -207,11 +205,6 @@ class TestInstanceLifecycle:
         assert_status_up()
         assert get_volume(instance.profile.home_mount)
         assert get_volume(instance.profile.conda_volume_name())
-        for extra_mount in instance.profile.extra_mounts:
-            extra_volume, _, _ = instance.profile.parse_extra_mount(extra_mount)
-            # NOTE: Currently we do not have extra mounts
-            # in the default config so this assert is never reached
-            assert get_volume(str(extra_volume))
 
         # Start instance again – should be noop.
         result: Result = runner.invoke(
