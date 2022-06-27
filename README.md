@@ -43,20 +43,21 @@ aiidalab-launch status
 The tool allows to manage multiple profiles, e.g., with different home directories or ports.
 See `aiidalab-launch profiles --help` for more information.
 
-
 ### Data Management
-By default AiiDalab will store all of its data in a [Docker volume](https://docs.docker.com/storage/volumes/)
-defined in the profile configuration option `home_mount`.
-You can also provide an absolute path to the AiiDalab home directory on the host system
-(so called [bind mount](https://docs.docker.com/storage/bind-mounts/)).
-If this directory does not exist, aiidalab-launch will try to create it on startup.
 
-Additional volumes to be mounted to the the AiiDAlab container can be specified via the `extra_mounts` option
-using the ["docker-compose "short syntax"](https://docs.docker.com/compose/compose-file/compose-file-v3/#volumes)
-`source:target:mode`.
+By default AiiDAlab will store all of its data in a [Docker volume](https://docs.docker.com/storage/volumes/) defined in the profile configuration option `home_mount`.
+You can also provide an absolute path to the AiiDAlab home directory on the host system (so called [bind mount](https://docs.docker.com/storage/bind-mounts/)).
+If this directory does not exist, AiiDAlab launch will try to create it on startup.
+
+Additional volumes to be mounted to the the AiiDAlab container can be specified via the `extra_mounts` option using the ["docker-compose "short syntax"](https://docs.docker.com/compose/compose-file/compose-file-v3/#volumes) `source:target:mode`.
 `source` is either a volume name or an absolute path to an existing directory on the host system,
 `target` is a path within the AiiDAlab container,
 and mode is either `rw` for read-write volume (default) or `ro` for read-only volume.
+
+As an example, here's how you can mount a quantum chemistry program installed on the host system to make it accessible to AiiDA inside the AiiDAlab container:
+```python
+extra_mounts = ["/path/to/qcprogram:/opt/qcprogram:ro",]
+```
 
 ### Forward AiiDAlab from a remote server via SSH
 
