@@ -30,7 +30,9 @@ class Config:
         config = deepcopy(loaded_config)
         config["profiles"] = []
         for name, profile in loaded_config.pop("profiles", dict()).items():
-            extra_mounts = set(profile.pop("extra_mounts"))
+            extra_mounts = (
+                set(profile.pop("extra_mounts")) if "extra_mounts" in profile else set()
+            )
             config["profiles"].append(
                 Profile(name=name, extra_mounts=extra_mounts, **profile)
             )
