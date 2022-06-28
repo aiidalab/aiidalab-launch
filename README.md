@@ -59,6 +59,9 @@ As an example, here's how you can mount a quantum chemistry program installed on
 extra_mounts = ["/path/to/qcprogram:/opt/qcprogram:ro",]
 ```
 
+Finally, AiiDAlab launch will create a dedicated volume for the local conda environment (`~/.conda`).
+That is because some conda packages are not compatible with non-linux file systems, meaning that they cannot be installed if the home directory was, for example, bound to a Mac OS-X file system on the host.
+
 ### Forward AiiDAlab from a remote server via SSH
 
 Please see [here](ssh-forward.md) for instructions on how to run AiiDAlab on a remote machine and then forward it to your local terminal.
