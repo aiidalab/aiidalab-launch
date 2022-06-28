@@ -248,7 +248,7 @@ class TestInstanceLifecycle:
 @pytest.mark.trylast
 class TestExtraVolumes:
     def test_extra_volumes(
-        self, instance, application_state, random_volume_name, docker_client, caplog
+        self, instance, application_state, extra_volume_name, docker_client, caplog
     ):
         caplog.set_level(logging.DEBUG)
 
@@ -256,7 +256,7 @@ class TestExtraVolumes:
         config = application_state.config
         profile = config.profiles[0]
         assert profile.name == config.default_profile
-        profile.extra_mounts = {f"{random_volume_name}:/opt/extra:rw"}
+        profile.extra_mounts = {f"{extra_volume_name}:/opt/extra:rw"}
         replace(
             application_state, config=replace(config, profiles=[profile])
         ).save_config()
@@ -265,17 +265,17 @@ class TestExtraVolumes:
         runner: CliRunner = CliRunner()
         result = runner.invoke(cli.cli, ["profiles", "show", profile.name])
         assert result.exit_code == 0
-        assert random_volume_name in result.output
+        assert extra_volume_name in result.output
 
         # Start instance
         runner: CliRunner = CliRunner()
         result: Result = runner.invoke(
             cli.cli, ["start", "--no-browser", "--no-pull", "--wait=300"]
         )
-        assert random_volume_name in result.output
+        assert extra_volume_name in result.output
         assert result.exit_code == 0
 
-        docker_client.volumes.get(random_volume_name)  # should not throw
+        docker_client.volumes.get(extra_volume_name)  # should not throw
 
         # Check that instance is up.
         result: Result = runner.invoke(cli.cli, ["status"])

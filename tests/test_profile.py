@@ -49,27 +49,27 @@ def test_profile_init_invalid_names(profile, name):
 
 
 @pytest.mark.parametrize("home_mount", VALID_HOME_MOUNTS)
-def test_profile_init_valid_home_mounts(profile, random_volume_name, home_mount):
-    home_mount = home_mount.format(path=Path.home(), vol=random_volume_name)
+def test_profile_init_valid_home_mounts(profile, extra_volume_name, home_mount):
+    home_mount = home_mount.format(path=Path.home(), vol=extra_volume_name)
     assert replace(profile, home_mount=home_mount).home_mount == home_mount
 
 
 @pytest.mark.parametrize("home_mount", INVALID_HOME_MOUNTS)
-def test_profile_init_invalid_home_mounts(profile, random_volume_name, home_mount):
-    home_mount = home_mount.format(path=Path.home(), vol=random_volume_name)
+def test_profile_init_invalid_home_mounts(profile, extra_volume_name, home_mount):
+    home_mount = home_mount.format(path=Path.home(), vol=extra_volume_name)
     with pytest.raises(ValueError):
         replace(profile, home_mount=home_mount)
 
 
 @pytest.mark.parametrize("extra_mount", VALID_EXTRA_MOUNTS)
-def test_profile_init_valid_extra_mounts(profile, random_volume_name, extra_mount):
-    extra_mounts = {extra_mount.format(path=Path.home(), vol=random_volume_name)}
+def test_profile_init_valid_extra_mounts(profile, extra_volume_name, extra_mount):
+    extra_mounts = {extra_mount.format(path=Path.home(), vol=extra_volume_name)}
     assert replace(profile, extra_mounts=extra_mounts).extra_mounts == extra_mounts
 
 
 @pytest.mark.parametrize("extra_mount", INVALID_EXTRA_MOUNTS)
-def test_profile_init_invalid_extra_mounts(profile, random_volume_name, extra_mount):
-    extra_mounts = {extra_mount.format(path=Path.home(), vol=random_volume_name)}
+def test_profile_init_invalid_extra_mounts(profile, extra_volume_name, extra_mount):
+    extra_mounts = {extra_mount.format(path=Path.home(), vol=extra_volume_name)}
     with pytest.raises(ValueError):
         replace(profile, extra_mounts=extra_mounts)
 
