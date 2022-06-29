@@ -87,6 +87,11 @@ def _container_prefix(_random_token, monkeypatch_session):
     yield container_prefix
 
 
+@pytest.fixture(scope="class")
+def extra_volume_name(_random_token):
+    yield f"aiidalab-launch_tests_{_random_token}_extra_volume"
+
+
 # Avoid accidentally reading or writing from the host home directory.
 @pytest.fixture(scope="class", autouse=True)
 def home_path(tmp_path_factory, monkeypatch_session):
@@ -124,7 +129,17 @@ def profile(config):
 def instance(docker_client, profile):
     instance = AiidaLabInstance(client=docker_client, profile=profile)
     yield instance
-    for op in (instance.stop, partial(instance.remove, conda=True, data=True)):
+
+    def remove_extra_mounts():
+        for extra_mount in instance.profile.extra_mounts:
+            extra_volume, _, _ = instance.profile.parse_extra_mount(extra_mount)
+            docker_client.volumes.get(str(extra_volume)).remove()
+
+    for op in (
+        instance.stop,
+        partial(instance.remove, conda=True, data=True),
+        remove_extra_mounts,
+    ):
         try:
             op()
         except (docker.errors.NotFound, RequiresContainerInstance):

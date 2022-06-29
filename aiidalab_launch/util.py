@@ -160,10 +160,9 @@ def confirm_with_value(value: str, text: str, abort: bool = False) -> bool:
         return False
 
 
-def docker_mount_for(
+def get_docker_mount(
     container: docker.models.containers.Container, destination: PurePosixPath
-) -> Union[Path, str]:
-    """Identify the Docker mount bind path or volume for a given destination."""
+) -> docker.types.Mount:
     try:
         mount = [
             mount
@@ -172,6 +171,21 @@ def docker_mount_for(
         ][0]
     except IndexError:
         raise ValueError(f"No mount point for {destination}.")
+    return mount
+
+
+def is_volume_readonly(
+    container: docker.models.containers.Container, destination: PurePosixPath
+) -> bool:
+    mount = get_docker_mount(container, destination)
+    return not mount["RW"]
+
+
+def docker_mount_for(
+    container: docker.models.containers.Container, destination: PurePosixPath
+) -> Union[Path, str]:
+    """Identify the Docker mount bind path or volume for a given destination."""
+    mount = get_docker_mount(container, destination)
     if mount["Type"] == "bind":
         docker_root = PurePosixPath("/host_mnt")
         docker_path = PurePosixPath(mount["Source"])

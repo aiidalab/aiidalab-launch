@@ -2,6 +2,7 @@
 # with py 3.10.
 from __future__ import annotations
 
+from copy import deepcopy
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from uuid import uuid4
@@ -25,11 +26,16 @@ class Config:
 
     @classmethod
     def loads(cls, blob: str) -> Config:
-        config = toml.loads(blob)
-        config["profiles"] = [
-            Profile(name=name, **profile)
-            for name, profile in config.pop("profiles", dict()).items()
-        ]
+        loaded_config = toml.loads(blob)
+        config = deepcopy(loaded_config)
+        config["profiles"] = []
+        for name, profile in loaded_config.pop("profiles", dict()).items():
+            extra_mounts = (
+                set(profile.pop("extra_mounts")) if "extra_mounts" in profile else set()
+            )
+            config["profiles"].append(
+                Profile(name=name, extra_mounts=extra_mounts, **profile)
+            )
         return cls(**config)
 
     def dumps(self) -> str:

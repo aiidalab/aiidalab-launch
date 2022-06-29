@@ -53,6 +53,8 @@ more detailed instructions on SSH port forwarding.
 
 Home mounted: {home_mount} -> /home/{system_user}"""
 
+MSG_EXTRA_VOLUME = "Extra volume mounted: {source} -> {target} {mode}"
+
 
 LOGGING_LEVELS = {
     0: logging.ERROR,
@@ -437,6 +439,18 @@ async def _async_start(
                 ).lstrip(),
                 fg="green",
             )
+
+            for extra_mount in profile.extra_mounts:
+                source, target, mode = profile.parse_extra_mount(extra_mount)
+                click.secho(
+                    MSG_EXTRA_VOLUME.format(
+                        source=source,
+                        target=target,
+                        mode=f"({mode})" if mode else "",
+                    ).lstrip(),
+                    fg="green",
+                )
+
             if not no_browser and webbrowser_available():
                 if click.confirm(
                     "Do you want to open AiiDAlab in the browser now?", default=True

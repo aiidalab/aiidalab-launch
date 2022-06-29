@@ -8,6 +8,7 @@ This is the test module for the project's command-line interface (CLI)
 module.
 """
 import logging
+from dataclasses import replace
 
 import docker
 import pytest
@@ -241,3 +242,44 @@ class TestInstanceLifecycle:
 
         assert not get_volume(instance.profile.home_mount)
         assert not get_volume(instance.profile.conda_volume_name())
+
+
+@pytest.mark.slow
+@pytest.mark.trylast
+class TestExtraVolumes:
+    def test_extra_volumes(
+        self, instance, application_state, extra_volume_name, docker_client, caplog
+    ):
+        caplog.set_level(logging.DEBUG)
+
+        # Add extra volume to default profile.
+        config = application_state.config
+        profile = config.profiles[0]
+        assert profile.name == config.default_profile
+        profile.extra_mounts = {f"{extra_volume_name}:/opt/extra:rw"}
+        replace(
+            application_state, config=replace(config, profiles=[profile])
+        ).save_config()
+
+        # Check that extra volume is picked up.
+        runner: CliRunner = CliRunner()
+        result = runner.invoke(cli.cli, ["profiles", "show", profile.name])
+        assert result.exit_code == 0
+        assert extra_volume_name in result.output
+
+        # Start instance
+        runner: CliRunner = CliRunner()
+        result: Result = runner.invoke(
+            cli.cli, ["start", "--no-browser", "--no-pull", "--wait=300"]
+        )
+        assert extra_volume_name in result.output
+        assert result.exit_code == 0
+
+        docker_client.volumes.get(extra_volume_name)  # should not throw
+
+        # Check that instance is up.
+        result: Result = runner.invoke(cli.cli, ["status"])
+        assert result.exit_code == 0
+        assert instance.profile.container_name() in result.output
+        assert "up" in result.output
+        assert instance.url() in result.output
