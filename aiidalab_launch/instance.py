@@ -286,7 +286,7 @@ class AiidaLabInstance:
     @staticmethod
     async def _init_scripts_finished(container: Container) -> None:
         loop = asyncio.get_event_loop()
-        LOGGER.debug("Waiting for init services to finish...")
+        LOGGER.info("Waiting for init services to finish...")
         result = await loop.run_in_executor(
             None, container.exec_run, "wait-for-services"
         )
@@ -294,26 +294,37 @@ class AiidaLabInstance:
             raise FailedToWaitForServices(
                 "Failed to check for init processes to complete."
             )
-        LOGGER.debug("Init services finished.")
+        LOGGER.info("Init services finished.")
 
     @staticmethod
     async def _notebook_service_online(container: Container) -> None:
         loop = asyncio.get_event_loop()
-        LOGGER.debug("Waiting for notebook service to become reachable...")
+        LOGGER.info("Waiting for notebook service to become reachable...")
+        proto = "http"
         while True:
             try:
                 LOGGER.debug("Curl notebook...")
                 result = await loop.run_in_executor(
                     None,
                     container.exec_run,
-                    "curl --fail-early --fail --silent --max-time 1.0 http://localhost:8888",
+                    f"curl --fail-early --fail --silent --max-time 1.0 {proto}://localhost:8888",
                 )
                 if result.exit_code == 0:
-                    LOGGER.debug("Notebook service reachable.")
+                    LOGGER.info("Notebook service reachable.")
                     return  # jupyter is online
                 elif result.exit_code in (7, 28):
                     await asyncio.sleep(2)  # jupyter not yet reachable
                     continue
+                elif result.exit_code == 56 and proto == "http":
+                    proto = "https"
+                    LOGGER.info("Trying to connect via HTTPS.")
+                    continue
+                elif result.exit_code == 60:
+                    # This is fine for local development
+                    LOGGER.warn(
+                        "Could not authenticate HTTPS certificate of Jupyter notebook"
+                    )
+                    break
                 else:
                     raise FailedToWaitForServices("Failed to reach notebook service.")
             except docker.errors.APIError:
