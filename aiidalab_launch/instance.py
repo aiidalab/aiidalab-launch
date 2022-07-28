@@ -300,14 +300,14 @@ class AiidaLabInstance:
     async def _notebook_service_online(container: Container) -> None:
         loop = asyncio.get_event_loop()
         LOGGER.info("Waiting for notebook service to become reachable...")
-        proto = "http"
+        assumed_protocol = "http"
         while True:
             try:
                 LOGGER.debug("Curl notebook...")
                 result = await loop.run_in_executor(
                     None,
                     container.exec_run,
-                    f"curl --fail-early --fail --silent --max-time 1.0 {proto}://localhost:8888",
+                    f"curl --fail-early --fail --silent --max-time 1.0 {assumed_protocol}://localhost:8888",
                 )
                 if result.exit_code == 0:
                     LOGGER.info("Notebook service reachable.")
@@ -315,15 +315,13 @@ class AiidaLabInstance:
                 elif result.exit_code in (7, 28):
                     await asyncio.sleep(2)  # jupyter not yet reachable
                     continue
-                elif result.exit_code == 56 and proto == "http":
-                    proto = "https"
+                elif result.exit_code == 56 and assumed_protocol == "http":
+                    assumed_protocol = "https"
                     LOGGER.info("Trying to connect via HTTPS.")
                     continue
                 elif result.exit_code == 60:
-                    # This is fine for local development
-                    LOGGER.warn(
-                        "Could not authenticate HTTPS certificate of Jupyter notebook"
-                    )
+                    LOGGER.info("Notebook service reachable.")
+                    LOGGER.warn("Could not authenticate HTTPS certificate.")
                     break
                 else:
                     raise FailedToWaitForServices("Failed to reach notebook service.")
