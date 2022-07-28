@@ -65,6 +65,7 @@ class AiidaLabInstance:
     profile: Profile
     _image: docker.models.images.Image = None
     _container: Container = None
+    _protocol: str = "http"
 
     def _get_image(self) -> docker.models.images.Image | None:
         try:
@@ -297,7 +298,7 @@ class AiidaLabInstance:
         LOGGER.info("Init services finished.")
 
     @staticmethod
-    async def _notebook_service_online(container: Container) -> None:
+    async def _notebook_service_online(container: Container) -> str:
         loop = asyncio.get_event_loop()
         LOGGER.info("Waiting for notebook service to become reachable...")
         assumed_protocol = "http"
@@ -311,7 +312,7 @@ class AiidaLabInstance:
                 )
                 if result.exit_code == 0:
                     LOGGER.info("Notebook service reachable.")
-                    return  # jupyter is online
+                    return assumed_protocol
                 elif result.exit_code in (7, 28):
                     await asyncio.sleep(2)  # jupyter not yet reachable
                     continue
@@ -322,7 +323,7 @@ class AiidaLabInstance:
                 elif result.exit_code == 60:
                     LOGGER.info("Notebook service reachable.")
                     LOGGER.warn("Could not authenticate HTTPS certificate.")
-                    break
+                    return assumed_protocol
                 else:
                     raise FailedToWaitForServices("Failed to reach notebook service.")
             except docker.errors.APIError:
@@ -345,7 +346,7 @@ class AiidaLabInstance:
         container = self._requires_container()
         LOGGER.info(f"Waiting for services to come up ({container.id})...")
         start = time()
-        await asyncio.gather(
+        _, self._protocol, _ = await asyncio.gather(
             self._init_scripts_finished(container),
             self._notebook_service_online(container),
             self._host_port_assigned(container),
@@ -386,6 +387,8 @@ class AiidaLabInstance:
         host_ports = list(_get_host_ports(self.container))
         if len(host_ports) > 0:
             jupyter_token = get_docker_env(self.container, "JUPYTER_TOKEN")
-            return f"http://localhost:{host_ports[0]}/?token={jupyter_token}"
+            return (
+                f"{self._protocol}://localhost:{host_ports[0]}/?token={jupyter_token}"
+            )
         else:
             raise NoHostPortAssigned(self.container.id)
