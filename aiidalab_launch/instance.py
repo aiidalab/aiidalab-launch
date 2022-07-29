@@ -65,6 +65,7 @@ class AiidaLabInstance:
     profile: Profile
     _image: docker.models.images.Image = None
     _container: Container = None
+    _protocol: str = "http"
 
     def _get_image(self) -> docker.models.images.Image | None:
         try:
@@ -286,7 +287,7 @@ class AiidaLabInstance:
     @staticmethod
     async def _init_scripts_finished(container: Container) -> None:
         loop = asyncio.get_event_loop()
-        LOGGER.debug("Waiting for init services to finish...")
+        LOGGER.info("Waiting for init services to finish...")
         result = await loop.run_in_executor(
             None, container.exec_run, "wait-for-services"
         )
@@ -294,26 +295,35 @@ class AiidaLabInstance:
             raise FailedToWaitForServices(
                 "Failed to check for init processes to complete."
             )
-        LOGGER.debug("Init services finished.")
+        LOGGER.info("Init services finished.")
 
     @staticmethod
-    async def _notebook_service_online(container: Container) -> None:
+    async def _notebook_service_online(container: Container) -> str:
         loop = asyncio.get_event_loop()
-        LOGGER.debug("Waiting for notebook service to become reachable...")
+        LOGGER.info("Waiting for notebook service to become reachable...")
+        assumed_protocol = "http"
         while True:
             try:
                 LOGGER.debug("Curl notebook...")
                 result = await loop.run_in_executor(
                     None,
                     container.exec_run,
-                    "curl --fail-early --fail --silent --max-time 1.0 http://localhost:8888",
+                    f"curl --fail-early --fail --silent --max-time 1.0 {assumed_protocol}://localhost:8888",
                 )
                 if result.exit_code == 0:
-                    LOGGER.debug("Notebook service reachable.")
-                    return  # jupyter is online
+                    LOGGER.info("Notebook service reachable.")
+                    return assumed_protocol
                 elif result.exit_code in (7, 28):
                     await asyncio.sleep(2)  # jupyter not yet reachable
                     continue
+                elif result.exit_code == 56 and assumed_protocol == "http":
+                    assumed_protocol = "https"
+                    LOGGER.info("Trying to connect via HTTPS.")
+                    continue
+                elif result.exit_code == 60:
+                    LOGGER.info("Notebook service reachable.")
+                    LOGGER.warn("Could not authenticate HTTPS certificate.")
+                    return assumed_protocol
                 else:
                     raise FailedToWaitForServices("Failed to reach notebook service.")
             except docker.errors.APIError:
@@ -336,7 +346,7 @@ class AiidaLabInstance:
         container = self._requires_container()
         LOGGER.info(f"Waiting for services to come up ({container.id})...")
         start = time()
-        await asyncio.gather(
+        _, self._protocol, _ = await asyncio.gather(
             self._init_scripts_finished(container),
             self._notebook_service_online(container),
             self._host_port_assigned(container),
@@ -377,6 +387,8 @@ class AiidaLabInstance:
         host_ports = list(_get_host_ports(self.container))
         if len(host_ports) > 0:
             jupyter_token = get_docker_env(self.container, "JUPYTER_TOKEN")
-            return f"http://localhost:{host_ports[0]}/?token={jupyter_token}"
+            return (
+                f"{self._protocol}://localhost:{host_ports[0]}/?token={jupyter_token}"
+            )
         else:
             raise NoHostPortAssigned(self.container.id)

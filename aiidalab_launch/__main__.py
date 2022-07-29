@@ -415,9 +415,11 @@ async def _async_start(
                 )
             except RuntimeError:
                 raise click.ClickException(
-                    "The AiiDAlab instance failed to start. Consider to inspect "
-                    "the container output logs by increasing the output "
-                    "verbosity with 'aiidalab-launch -vvv start'."
+                    "The AiiDAlab instance failed to start. You can inspect "
+                    "the container output logs with "
+                    f"'aiidalab-launch logs -p {instance.profile.name}' "
+                    "and increase the output verbosity with "
+                    "'aiidalab-launch -vvv start'."
                 )
             LOGGER.debug("Preparing startup message.")
             msg_startup = (
