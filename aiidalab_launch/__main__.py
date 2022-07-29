@@ -69,8 +69,10 @@ pass_app_state = click.make_pass_decorator(ApplicationState, ensure=True)
 
 
 def exception_handler(exception_type, exception, traceback):  # noqa: U100
-    print(f"Unexpected {exception_type.__name__}: {exception}")
-    print("Use verbose mode `aiidalab-launch --verbose` to see full stacktrace")
+    click.echo(f"Unexpected {exception_type.__name__}: {exception}", err=True)
+    click.echo(
+        "Use verbose mode `aiidalab-launch --verbose` to see full stacktrace", err=True
+    )
 
 
 def with_profile(cmd):
