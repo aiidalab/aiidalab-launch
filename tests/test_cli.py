@@ -51,10 +51,10 @@ def test_version_verbose_logging():
     assert "Verbose logging is enabled." in result.output.strip()
 
 
-def test_hidden_stacktrace():
+def test_invalid_profile_name_throws():
     """
-    Arrange/Act: Run `profiles edit invalid` subcommand.
-    Assert:  The output does not contain stacktrace.
+    Arrange/Act: Run `profiles show invalid` subcommand.
+    Assert:  The command throws an exception due to invalid profile name.
     """
     runner: CliRunner = CliRunner()
     with pytest.raises(ValueError):
