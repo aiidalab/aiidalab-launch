@@ -51,6 +51,23 @@ def test_version_verbose_logging():
     assert "Verbose logging is enabled." in result.output.strip()
 
 
+def test_invalid_profile_name_throws():
+    """
+    Arrange/Act: Run `profiles show invalid` subcommand.
+    Assert:  The command throws an exception due to invalid profile name.
+    """
+    runner: CliRunner = CliRunner()
+    with pytest.raises(ValueError):
+        result: Result = runner.invoke(
+            cli.cli, ["profiles", "show", "invalid"], catch_exceptions=False
+        )
+    result: Result = runner.invoke(
+        cli.cli,
+        ["profiles", "show", "invalid"],
+    )
+    assert isinstance(result.exception, ValueError)
+
+
 def test_list_profiles():
     runner: CliRunner = CliRunner()
     result: Result = runner.invoke(cli.cli, ["profiles", "list"])

@@ -8,6 +8,7 @@ import asyncio
 import getpass
 import logging
 import socket
+import sys
 from pathlib import Path
 from textwrap import wrap
 
@@ -67,6 +68,13 @@ LOGGING_LEVELS = {
 pass_app_state = click.make_pass_decorator(ApplicationState, ensure=True)
 
 
+def exception_handler(exception_type, exception, traceback):  # noqa: U100
+    click.echo(f"Unexpected {exception_type.__name__}: {exception}", err=True)
+    click.echo(
+        "Use verbose mode `aiidalab-launch --verbose` to see full stack trace", err=True
+    )
+
+
 def with_profile(cmd):
     def callback(ctx, param, value):  # noqa: U100
         app_state = ctx.ensure_object(ApplicationState)
@@ -99,6 +107,10 @@ def cli(app_state, verbose):
             fg="yellow",
             err=True,
         )
+
+    # Hide stack trace by default.
+    if verbose == 0:
+        sys.excepthook = exception_handler
 
     LOGGER.info(f"Configuration file path: {app_state.config_path}")
 
