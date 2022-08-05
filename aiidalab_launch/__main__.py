@@ -68,7 +68,7 @@ LOGGING_LEVELS = {
 pass_app_state = click.make_pass_decorator(ApplicationState, ensure=True)
 
 
-def exception_handler(exception_type, exception, traceback):  # noqa 100
+def exception_handler(exception_type, exception, traceback):  # noqa: U100
     click.echo(f"Unexpected {exception_type.__name__}: {exception}", err=True)
     click.echo(
         "Use verbose mode `aiidalab-launch --verbose` to see full stack trace", err=True
@@ -76,7 +76,7 @@ def exception_handler(exception_type, exception, traceback):  # noqa 100
 
 
 def with_profile(cmd):
-    def callback(ctx, param, value):  # noqa 100
+    def callback(ctx, param, value):  # noqa: U100
         app_state = ctx.ensure_object(ApplicationState)
         name = value or app_state.config.default_profile
         LOGGER.info(f"Using profile: {name}")
