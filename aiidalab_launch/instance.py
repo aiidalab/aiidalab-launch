@@ -214,7 +214,8 @@ class AiidaLabInstance:
             LOGGER.warning(
                 "Failed to ensure ~/.conda directory is owned by the system user."
             )
-        LOGGER.debug("The ~/.conda directory is owned by the system user.")
+        else:
+            LOGGER.debug("The ~/.conda directory is owned by the system user.")
 
     def stop(self, timeout: float | None = None) -> None:
         self._requires_container()
