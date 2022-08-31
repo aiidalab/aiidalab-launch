@@ -292,7 +292,9 @@ class AiidaLabInstance:
         result = await loop.run_in_executor(
             None, container.exec_run, "wait-for-services"
         )
-        if result.exit_code != 0:
+        if result.exit_code in (126, 127):
+            LOGGER.debug("Container does not support wait-for-services script.")
+        elif result.exit_code != 0:
             raise FailedToWaitForServices(
                 "Failed to check for init processes to complete."
             )
