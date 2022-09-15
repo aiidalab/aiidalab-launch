@@ -211,7 +211,7 @@ class AiidaLabInstance:
             privileged=True,
         )
         if exit_code != 0:
-            LOGGER.warn(
+            LOGGER.warning(
                 "Failed to ensure ~/.conda directory is owned by the system user."
             )
         LOGGER.debug("The ~/.conda directory is owned by the system user.")
@@ -322,7 +322,7 @@ class AiidaLabInstance:
                     continue
                 elif result.exit_code == 60:
                     LOGGER.info("Notebook service reachable.")
-                    LOGGER.warn("Could not authenticate HTTPS certificate.")
+                    LOGGER.warning("Could not authenticate HTTPS certificate.")
                     return assumed_protocol
                 else:
                     raise FailedToWaitForServices("Failed to reach notebook service.")
