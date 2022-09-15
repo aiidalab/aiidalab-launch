@@ -70,6 +70,48 @@ Please see [here](ssh-forward.md) for instructions on how to run AiiDAlab on a r
 
 This package follows the Python compatibility and deprecation schedule specified by [NEP 29](https://numpy.org/neps/nep-0029-deprecation_policy.html).
 
+## Development
+
+### Setting up a development environment
+
+To develop this package, first clone it and then install the development dependencies with `pip install -e '.[dev,pre_commit]'`.
+We recommend to install the [pre-commit](https://pre-commit.com/) hooks to avoid unnecessary iterations when pushing new changes.
+To install the pre-commit hooks, switch into the repository root directly and execute:
+```console
+pre-commit install
+```
+
+### Run automated tests
+
+To run the automated tests suite, clone the repository, install test dependencies with `pip install -e '.[tests]'`, and then execute tests with
+
+```console
+pytest
+```
+for all standard tests, and
+```console
+pytest --slow
+```
+to run the full test suite, including tests that will start docker instances and may take multiple minutes.
+
+The continuous integration workflow will run all tests, including the "slow" ones.
+
+Note: On Mac OS-X you may have to override the standard temporary base directory to successfully run all tests (e.g. `pytest --basetemp=$HOME/tmp`) since the default base directory may not be accessible to the Docker runtime.
+
+### Creating a new release
+
+To create a new release, clone the repository, install development dependencies with `pip install -e '.[dev]'`, and then execute `bumpver update`.
+This will:
+
+  1. Create a tagged release with bumped version and push it to the repository.
+  2. Trigger a GitHub actions workflow that creates a GitHub release.
+
+Additional notes:
+
+  - Use the `--dry` option to preview the release change.
+  - The release tag (e.g. a/b/rc) is determined from the last release.
+    Use the `--tag` option to switch the release tag.
+
 ## Authors
 
 * **Carl Simon Adorf (EPFL)** - [@csadorf](https://github.com/csadorf)
@@ -92,19 +134,6 @@ aiidalab@materialscloud.org
 
 Contributions in any form are very welcome.
 Please see [CONTRIBUTING.md](CONTRIBUTING.md) for contribution guidelines.
-## For maintainers
-
-To create a new release, clone the repository, install development dependencies with `pip install -e '.[dev]'`, and then execute `bumpver update`.
-This will:
-
-  1. Create a tagged release with bumped version and push it to the repository.
-  2. Trigger a GitHub actions workflow that creates a GitHub release and publishes it on PyPI.
-
-Additional notes:
-
-  - Use the `--dry` option to preview the release change.
-  - The release tag (e.g. a/b/rc) is determined from the last release.
-    Use the `--tag` option to switch the release tag.
 
 ## MIT License
 
