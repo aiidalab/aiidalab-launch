@@ -159,7 +159,10 @@ class TestsAgainstStartedInstance:
 
     def test_instance_exec_create(self, docker_client, started_instance):
         exec_id = started_instance.exec_create(cmd="whoami")
-        assert docker_client.api.exec_start(exec_id).decode().strip() == "aiida"
+        assert (
+            docker_client.api.exec_start(exec_id).decode().strip()
+            == started_instance.profile.system_user
+        )
 
         exec_id_privileged = started_instance.exec_create(cmd="whoami", privileged=True)
         assert (
