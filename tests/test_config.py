@@ -13,7 +13,7 @@ CONFIGS = {
         port = 8888
         default_apps = [ "aiidalab-widgets-base",]
         system_user = "aiida"
-        image = "aiidalab/aiidalab-docker-stack:latest"
+        image = "aiidalab/full-stack:edge"
         home_mount = "aiidalab_default_home"
         """
 }

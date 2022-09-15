@@ -122,7 +122,7 @@ async def test_profile_configuration_changes(instance):
     assert not any(instance.configuration_changes())
 
     # Change image
-    instance.profile.image = "aiidalab/aiidalab-docker-stack:1234"
+    instance.profile.image = "aiidalab/full-stack:1234"
     assert "Profile configuration has changed." in instance.configuration_changes()
     instance.profile = deepcopy(original_profile)
     assert not any(instance.configuration_changes())

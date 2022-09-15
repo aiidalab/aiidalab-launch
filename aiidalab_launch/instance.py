@@ -271,7 +271,7 @@ class AiidaLabInstance:
             return self.client.api.exec_create(
                 self.container.id,
                 cmd,
-                user=None if privileged else self.profile.system_user,
+                user="root" if privileged else self.profile.system_user,
                 workdir=None if privileged else f"/home/{self.profile.system_user}",
             )["Id"]
         except docker.errors.APIError:
