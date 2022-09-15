@@ -57,6 +57,16 @@ def docker_client():
         pytest.skip("docker not available")
 
 
+@pytest.fixture(autouse=True)
+def _select_default_image(monkeypatch_session, pytestconfig):
+    _default_image = pytestconfig.getoption("default_image")
+    if _default_image is not None:
+        monkeypatch_session.setattr(
+            aiidalab_launch.profile, "_DEFAULT_IMAGE", _default_image
+        )
+    yield None
+
+
 @pytest.fixture(scope="session", autouse=True)
 def _pull_docker_image(docker_client):
     try:
@@ -249,6 +259,11 @@ def pytest_addoption(parser):
         dest="slow",
         default=False,
         help="Enable long running tests.",
+    )
+    parser.addoption(
+        "--default-image",
+        action="store",
+        help="Select the default image to test against.",
     )
 
 
