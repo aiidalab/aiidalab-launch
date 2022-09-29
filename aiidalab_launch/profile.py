@@ -10,6 +10,7 @@ from urllib.parse import quote_plus
 import toml
 from docker.models.containers import Container
 
+from .core import LOGGER
 from .util import docker_mount_for, get_docker_env, is_volume_readonly
 
 MAIN_PROFILE_NAME = "default"
@@ -30,7 +31,7 @@ def _default_port() -> int:  # explicit function required to enable test patchin
     return DEFAULT_PORT
 
 
-_DEFAULT_IMAGE = "aiidalab/aiidalab-docker-stack:latest"
+_DEFAULT_IMAGE = "aiidalab/full-stack:latest"
 
 
 def _valid_volume_name(source: str) -> None:
@@ -65,7 +66,7 @@ class Profile:
     name: str = MAIN_PROFILE_NAME
     port: int | None = field(default_factory=_default_port)
     default_apps: list[str] = field(default_factory=lambda: ["aiidalab-widgets-base"])
-    system_user: str = "aiida"
+    system_user: str = "jovyan"
     image: str = _DEFAULT_IMAGE
     home_mount: str | None = None
     extra_mounts: set[str] = field(default_factory=set)
@@ -92,6 +93,14 @@ class Profile:
             if len(extra_mount.split(":")) == 2:
                 self.extra_mounts.remove(extra_mount)
                 self.extra_mounts.add(f"{extra_mount}:rw")
+
+        if (
+            self.image.split(":")[0] == "aiidalab/full-stack"
+            and self.system_user != "jovyan"
+        ):
+            LOGGER.warning(
+                "Resetting the system user may create issues for this image!"
+            )
 
     def container_name(self) -> str:
         return f"{CONTAINER_PREFIX}{self.name}"
@@ -127,6 +136,7 @@ class Profile:
             "AIIDALAB_DEFAULT_APPS": " ".join(self.default_apps),
             "JUPYTER_TOKEN": str(jupyter_token),
             "SYSTEM_USER": self.system_user,
+            "NB_USER": self.system_user,
         }
 
     def dumps(self) -> str:

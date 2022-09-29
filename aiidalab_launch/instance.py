@@ -214,7 +214,8 @@ class AiidaLabInstance:
             LOGGER.warning(
                 "Failed to ensure ~/.conda directory is owned by the system user."
             )
-        LOGGER.debug("The ~/.conda directory is owned by the system user.")
+        else:
+            LOGGER.debug("The ~/.conda directory is owned by the system user.")
 
     def stop(self, timeout: float | None = None) -> None:
         self._requires_container()
@@ -270,7 +271,7 @@ class AiidaLabInstance:
             return self.client.api.exec_create(
                 self.container.id,
                 cmd,
-                user=None if privileged else self.profile.system_user,
+                user="root" if privileged else self.profile.system_user,
                 workdir=None if privileged else f"/home/{self.profile.system_user}",
             )["Id"]
         except docker.errors.APIError:
@@ -291,7 +292,9 @@ class AiidaLabInstance:
         result = await loop.run_in_executor(
             None, container.exec_run, "wait-for-services"
         )
-        if result.exit_code != 0:
+        if result.exit_code in (126, 127):
+            LOGGER.debug("Container does not support wait-for-services script.")
+        elif result.exit_code != 0:
             raise FailedToWaitForServices(
                 "Failed to check for init processes to complete."
             )

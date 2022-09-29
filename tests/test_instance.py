@@ -122,7 +122,7 @@ async def test_profile_configuration_changes(instance):
     assert not any(instance.configuration_changes())
 
     # Change image
-    instance.profile.image = "aiidalab/aiidalab-docker-stack:1234"
+    instance.profile.image = "aiidalab/full-stack:1234"
     assert "Profile configuration has changed." in instance.configuration_changes()
     instance.profile = deepcopy(original_profile)
     assert not any(instance.configuration_changes())
@@ -159,7 +159,10 @@ class TestsAgainstStartedInstance:
 
     def test_instance_exec_create(self, docker_client, started_instance):
         exec_id = started_instance.exec_create(cmd="whoami")
-        assert docker_client.api.exec_start(exec_id).decode().strip() == "aiida"
+        assert (
+            docker_client.api.exec_start(exec_id).decode().strip()
+            == started_instance.profile.system_user
+        )
 
         exec_id_privileged = started_instance.exec_create(cmd="whoami", privileged=True)
         assert (

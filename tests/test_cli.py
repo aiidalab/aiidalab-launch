@@ -161,11 +161,11 @@ class TestsAgainstStartedInstance:
         assert started_instance.profile.home_mount in result.output
         assert started_instance.url() in result.output
 
-    def test_exec(self):
+    def test_exec(self, started_instance):
         runner: CliRunner = CliRunner()
         result: Result = runner.invoke(cli.cli, ["exec", "--", "whoami"])
         assert result.exit_code == 0
-        assert "aiida" in result.output
+        assert started_instance.profile.system_user in result.output
 
     def test_logs(self):
         runner: CliRunner = CliRunner()
