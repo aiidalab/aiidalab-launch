@@ -31,7 +31,7 @@ def _default_port() -> int:  # explicit function required to enable test patchin
     return DEFAULT_PORT
 
 
-_DEFAULT_IMAGE = "aiidalab/full-stack:edge"
+_DEFAULT_IMAGE = "aiidalab/full-stack:latest"
 
 
 def _valid_volume_name(source: str) -> None:
