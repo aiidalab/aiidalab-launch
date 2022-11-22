@@ -327,17 +327,15 @@ async def _async_start(
 
     # Obtain image (either via pull or local).
     if pull:
-        try:
-            msg = (
-                f"Downloading image '{instance.profile.image}', this may take a while..."
-                if instance.image is None
-                else f"Downloading latest version of '{instance.profile.image}'..."
-            )
-            with spinner(msg):
-                instance.pull()
-        except RuntimeError as error:
-            raise click.ClickException(str(error))
-    elif instance.image is None:
+        msg = (
+            f"Downloading image '{instance.profile.image}', this may take a while..."
+            if instance.image is None
+            else f"Downloading latest version of '{instance.profile.image}'..."
+        )
+        with spinner(msg):
+            instance.pull()
+
+    if instance.image is None:
         raise click.ClickException(
             f"Unable to find image '{profile.image}'. "
             "Try to use '--pull' to pull the image prior to start."
