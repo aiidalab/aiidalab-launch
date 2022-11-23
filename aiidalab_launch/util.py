@@ -1,4 +1,5 @@
 import asyncio
+import logging
 import re
 import webbrowser
 from contextlib import contextmanager
@@ -43,6 +44,13 @@ def spinner(
     def spin() -> None:
         if msg:
             click.echo(f"{msg.rstrip()} ", nl=False, err=True)
+
+        # Don't show spinner if verbose output is enabled
+        level = logging.getLogger().getEffectiveLevel()
+        if level != 0 and level < 40:
+            stop.wait()
+            return
+
         with click_spinner.spinner():  # type: ignore
             stop.wait()
         click.echo(
