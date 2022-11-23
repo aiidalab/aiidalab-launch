@@ -214,6 +214,8 @@ class TestInstanceLifecycle:
         assert result.exit_code == 0
 
         # Start instance again (blocking, should be no-op).
+        # Disabling verbose logging to test the spinner
+        caplog.set_level(logging.ERROR)
         runner: CliRunner = CliRunner()
         result: Result = runner.invoke(
             cli.cli, ["start", "--no-browser", "--no-pull", "--wait=300"]
@@ -225,6 +227,7 @@ class TestInstanceLifecycle:
         assert get_volume(instance.profile.conda_volume_name())
 
         # Start instance again – should be noop.
+        caplog.set_level(logging.DEBUG)
         result: Result = runner.invoke(
             cli.cli, ["start", "--no-browser", "--no-pull", "--wait=300"]
         )
