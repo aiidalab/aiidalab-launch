@@ -36,7 +36,7 @@ SESSION = CachedSession(
 
 @contextmanager
 def spinner(
-    msg: str = None, final: str = None, delay: float = 0
+    msg: Optional[str] = None, final: Optional[str] = None, delay: float = 0
 ) -> Generator[None, None, None]:
     """Display spinner only after an optional initial delay."""
 
