@@ -47,7 +47,7 @@ def spinner(
 
         # Don't show spinner if verbose output is enabled
         level = logging.getLogger().getEffectiveLevel()
-        if level != 0 and level < 40:
+        if level != logging.NOTSET and level < logging.ERROR:
             stop.wait()
             return
 
