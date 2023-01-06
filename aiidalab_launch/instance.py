@@ -151,14 +151,15 @@ class AiidaLabInstance:
         if self.profile != Profile.from_container(self.container):
             yield "Profile configuration has changed."
 
-    def pull(self) -> docker.models.images.Image:
+    def pull(self) -> docker.models.images.Image | None:
         try:
             image = self.client.images.pull(self.profile.image)
             LOGGER.info(f"Pulled image: {image}")
             self._image = image
             return image
         except docker.errors.NotFound:
-            raise RuntimeError(f"Unable to pull image: {self.profile.image}")
+            LOGGER.warn(f"Unable to pull image: {self.profile.image}")
+            return None
 
     def _ensure_home_mount_exists(self) -> None:
         if self.profile.home_mount:

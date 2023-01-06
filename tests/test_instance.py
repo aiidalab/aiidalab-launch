@@ -27,11 +27,13 @@ def test_instance_pull(instance, enable_docker_pull):
         .pull()
         .tags
     )
-    with pytest.raises(RuntimeError):
+    assert (
         replace(
             instance,
             profile=replace(instance.profile, image="hello-world:no-valid-tag"),
         ).pull()
+        is None
+    )
 
 
 def test_instance_unknown_image(instance, invalid_image_id):
