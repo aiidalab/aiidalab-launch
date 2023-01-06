@@ -42,20 +42,24 @@ def spinner(
     """Display spinner only after an optional initial delay."""
 
     def spin() -> None:
-        if msg:
-            click.echo(f"{msg.rstrip()} ", nl=False, err=True)
 
         # Don't show spinner if verbose output is enabled
         level = logging.getLogger().getEffectiveLevel()
-        if level != logging.NOTSET and level < logging.ERROR:
-            stop.wait()
-            return
-
-        with click_spinner.spinner():  # type: ignore
-            stop.wait()
-        click.echo(
-            (final or "done.") if (completed.is_set() and msg) else " ", err=True
+        show_spinner = (
+            True if level == logging.NOTSET or level >= logging.ERROR else False
         )
+        if msg:
+            newline = not show_spinner
+            click.echo(f"{msg.rstrip()} ", nl=newline, err=True)
+
+        if show_spinner:
+            with click_spinner.spinner():  # type: ignore
+                stop.wait()
+            click.echo(
+                (final or "done.") if (completed.is_set() and msg) else " ", err=True
+            )
+        else:
+            stop.wait()
 
     stop = Event()
     completed = Event()
