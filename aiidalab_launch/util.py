@@ -37,7 +37,7 @@ SESSION = CachedSession(
 
 @contextmanager
 def spinner(
-    msg: Optional[str] = None, final: Optional[str] = None, delay: float = 0
+    msg: Optional[str] = None, final: Optional[str] = "done.", delay: float = 0
 ) -> Generator[None, None, None]:
     """Display spinner only after an optional initial delay."""
 
@@ -55,9 +55,7 @@ def spinner(
         if show_spinner:
             with click_spinner.spinner():  # type: ignore
                 stop.wait()
-            click.echo(
-                (final or "done.") if (completed.is_set() and msg) else " ", err=True
-            )
+            click.echo(final if (completed.is_set() and msg) else " ", err=True)
         else:
             stop.wait()
 
