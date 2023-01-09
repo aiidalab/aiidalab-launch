@@ -92,7 +92,10 @@ def with_profile(cmd):
     "-v",
     "--verbose",
     count=True,
-    help="Provide this option to increase the output verbosity of the launcher.",
+    help=(
+        "Increase the output verbosity of the launcher. "
+        "Use '-vv' or '-vvv' for even more verbose output"
+    ),
 )
 @pass_app_state
 def cli(app_state, verbose):
