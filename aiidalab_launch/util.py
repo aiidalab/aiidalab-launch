@@ -1,4 +1,5 @@
 import asyncio
+import logging
 import re
 import webbrowser
 from contextlib import contextmanager
@@ -36,18 +37,27 @@ SESSION = CachedSession(
 
 @contextmanager
 def spinner(
-    msg: Optional[str] = None, final: Optional[str] = None, delay: float = 0
+    msg: Optional[str] = None, final: Optional[str] = "done.", delay: float = 0
 ) -> Generator[None, None, None]:
     """Display spinner only after an optional initial delay."""
 
     def spin() -> None:
-        if msg:
-            click.echo(f"{msg.rstrip()} ", nl=False, err=True)
-        with click_spinner.spinner():  # type: ignore
-            stop.wait()
-        click.echo(
-            (final or "done.") if (completed.is_set() and msg) else " ", err=True
+
+        # Don't show spinner if verbose output is enabled
+        level = logging.getLogger().getEffectiveLevel()
+        show_spinner = (
+            True if level == logging.NOTSET or level >= logging.ERROR else False
         )
+        if msg:
+            newline = not show_spinner
+            click.echo(f"{msg.rstrip()} ", nl=newline, err=True)
+
+        if show_spinner:
+            with click_spinner.spinner():  # type: ignore
+                stop.wait()
+            click.echo(final if (completed.is_set() and msg) else " ", err=True)
+        else:
+            stop.wait()
 
     stop = Event()
     completed = Event()
