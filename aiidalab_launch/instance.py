@@ -158,7 +158,7 @@ class AiidaLabInstance:
             self._image = image
             return image
         except docker.errors.NotFound:
-            LOGGER.warn(f"Unable to pull image: {self.profile.image}")
+            LOGGER.warning(f"Unable to pull image: {self.profile.image}")
             return None
 
     def _ensure_home_mount_exists(self) -> None:
