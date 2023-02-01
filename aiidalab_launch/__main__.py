@@ -419,7 +419,7 @@ async def _async_start(
             logging_level = logging.getLogger().getEffectiveLevel()
             try:
                 with spinner("Waiting for AiiDAlab instance to get ready..."):
-                    if logging_level <= logging.DEBUG:
+                    if logging_level == logging.DEBUG:
                         echo_logs = asyncio.create_task(instance.echo_logs())
                     await asyncio.wait_for(instance.wait_for_services(), timeout=wait)
             except asyncio.TimeoutError:
@@ -437,7 +437,7 @@ async def _async_start(
             else:
                 LOGGER.debug("AiiDAlab instance ready.")
             finally:
-                if logging_level <= logging.DEBUG:
+                if logging_level == logging.DEBUG:
                     echo_logs.cancel()
 
             LOGGER.debug("Preparing startup message.")
