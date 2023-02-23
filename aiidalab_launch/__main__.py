@@ -416,9 +416,11 @@ async def _async_start(
         raise click.ClickException(f"Unknown error occurred: {error}")
     else:
         if wait:
+            logging_level = logging.getLogger().getEffectiveLevel()
             try:
                 with spinner("Waiting for AiiDAlab instance to get ready..."):
-                    echo_logs = asyncio.create_task(instance.echo_logs())
+                    if logging_level == logging.DEBUG:
+                        echo_logs = asyncio.create_task(instance.echo_logs())
                     await asyncio.wait_for(instance.wait_for_services(), timeout=wait)
             except asyncio.TimeoutError:
                 raise click.ClickException(
@@ -435,7 +437,8 @@ async def _async_start(
             else:
                 LOGGER.debug("AiiDAlab instance ready.")
             finally:
-                echo_logs.cancel()
+                if logging_level == logging.DEBUG:
+                    echo_logs.cancel()
 
             LOGGER.debug("Preparing startup message.")
             msg_startup = (
