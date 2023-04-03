@@ -42,7 +42,6 @@ def spinner(
     """Display spinner only after an optional initial delay."""
 
     def spin() -> None:
-
         # Don't show spinner if verbose output is enabled
         level = logging.getLogger().getEffectiveLevel()
         show_spinner = (
