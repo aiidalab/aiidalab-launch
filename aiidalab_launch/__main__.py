@@ -351,7 +351,6 @@ async def _async_start(
         configuration_changed = False
 
     try:
-
         InstanceStatus = instance.AiidaLabInstanceStatus  # local alias for brevity
 
         status = await instance.status()

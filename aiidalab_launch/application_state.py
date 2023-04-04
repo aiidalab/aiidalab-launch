@@ -32,7 +32,6 @@ def _load_config():
 
 @dataclass
 class ApplicationState:
-
     config_path: Path = field(default_factory=_application_config_path)
     config: Config = field(default_factory=_load_config)
     docker_client: docker.DockerClient = field(default_factory=get_docker_client)
