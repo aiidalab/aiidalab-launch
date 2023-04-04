@@ -87,7 +87,7 @@ def with_profile(cmd):
     )(cmd)
 
 
-@click.group()
+@click.group(context_settings={"help_option_names": ["-h", "--help"]})
 @click.option(
     "-v",
     "--verbose",
