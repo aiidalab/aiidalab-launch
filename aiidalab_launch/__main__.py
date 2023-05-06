@@ -45,6 +45,11 @@ similar to
 
   ssh {user}@{hostname} -NfL {port}:localhost:{port}
 
+If you visit the remote machine through a jump server, you run (replace the J_IP with the jump server IP):
+
+  ssh -J {user}@J_IP {user}@{hostname} -NfL {port}:localhost:{port}
+
+
 on your local computer, then open AiiDAlab on your local computer at
 
   {url}
@@ -87,7 +92,7 @@ def with_profile(cmd):
     )(cmd)
 
 
-@click.group(context_settings={"help_option_names": ["-h", "--help"]})
+@click.group()
 @click.option(
     "-v",
     "--verbose",
@@ -351,6 +356,7 @@ async def _async_start(
         configuration_changed = False
 
     try:
+
         InstanceStatus = instance.AiidaLabInstanceStatus  # local alias for brevity
 
         status = await instance.status()
@@ -415,11 +421,9 @@ async def _async_start(
         raise click.ClickException(f"Unknown error occurred: {error}")
     else:
         if wait:
-            logging_level = logging.getLogger().getEffectiveLevel()
             try:
                 with spinner("Waiting for AiiDAlab instance to get ready..."):
-                    if logging_level == logging.DEBUG:
-                        echo_logs = asyncio.create_task(instance.echo_logs())
+                    echo_logs = asyncio.create_task(instance.echo_logs())
                     await asyncio.wait_for(instance.wait_for_services(), timeout=wait)
             except asyncio.TimeoutError:
                 raise click.ClickException(
@@ -436,8 +440,7 @@ async def _async_start(
             else:
                 LOGGER.debug("AiiDAlab instance ready.")
             finally:
-                if logging_level == logging.DEBUG:
-                    echo_logs.cancel()
+                echo_logs.cancel()
 
             LOGGER.debug("Preparing startup message.")
             msg_startup = (
