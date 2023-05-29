@@ -145,18 +145,32 @@ def test_add_profile_invalid_name():
     result: Result = runner.invoke(cli.cli, ["profiles", "add", "new_profile"])
     assert result.exit_code == 1
     assert "Invalid profile name 'new_profile'." in result.output
-    
+
+
 def test_add_profile_with_options():
     runner: CliRunner = CliRunner()
-    
+
     # Add new-profile with options
     result: Result = runner.invoke(
-        cli.cli, ["profiles", "add", "new-profile", "--port", "8900", "--home-mount", "/tmp/aiidalab-home", "--image", "aiidalab/full-stack:edge"], input="n\n",
+        cli.cli,
+        [
+            "profiles",
+            "add",
+            "new-profile",
+            "--port",
+            "8900",
+            "--home-mount",
+            "/tmp/aiidalab-home",
+            "--image",
+            "aiidalab/full-stack:edge",
+        ],
+        input="n\n",
     )
     assert result.exit_code == 0
-    
+
     result: Result = runner.invoke(cli.cli, ["profiles", "show", "new-profile"])
     assert "aiidalab/full-stack:edge" in result.output
+
 
 @pytest.mark.slow
 @pytest.mark.trylast
