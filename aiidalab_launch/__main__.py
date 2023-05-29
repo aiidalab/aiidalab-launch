@@ -137,12 +137,12 @@ def version():
 
 
 @cli.group()
-def profiles():
+def profile():
     """Manage AiiDAlab profiles."""
     pass
 
 
-@profiles.command("list")
+@profile.command("list")
 @pass_app_state
 def list_profiles(app_state):
     """List all configured AiiDAlab profiles.
@@ -163,7 +163,7 @@ def list_profiles(app_state):
     )
 
 
-@profiles.command("show")
+@profile.command("show")
 @click.argument("profile")
 @pass_app_state
 def show_profile(app_state, profile):
@@ -171,7 +171,7 @@ def show_profile(app_state, profile):
     click.echo(app_state.config.get_profile(profile).dumps(), nl=False)
 
 
-@profiles.command("add")
+@profile.command("add")
 @click.argument("profile")
 @click.option(
     "--port",
@@ -218,7 +218,7 @@ def add_profile(ctx, app_state, port, home_mount, profile):
         ctx.invoke(edit_profile, profile=profile)
 
 
-@profiles.command("remove")
+@profile.command("remove")
 @click.argument("profile")
 @click.option("--yes", is_flag=True, help="Do not ask for confirmation.")
 @click.option("-f", "--force", is_flag=True, help="Proceed, ignoring any warnings.")
@@ -252,7 +252,7 @@ def remove_profile(app_state, profile, yes, force):
             click.echo(f"Removed profile with name '{profile.name}'.")
 
 
-@profiles.command("edit")
+@profile.command("edit")
 @click.argument("profile")
 @pass_app_state
 def edit_profile(app_state, profile):
@@ -269,7 +269,7 @@ def edit_profile(app_state, profile):
     click.echo("No changes.")
 
 
-@profiles.command("set-default")
+@profile.command("set-default")
 @click.argument("profile")
 @pass_app_state
 def set_default_profile(app_state, profile):
@@ -404,7 +404,7 @@ async def _async_start(
         if instance.profile.port and "port is already allocated" in str(error):
             raise click.ClickException(
                 f"Port {instance.profile.port} is already allocated, choose another port "
-                f"for example, by editing the profile: aiidalab-launch profiles edit {instance.profile.name}"
+                f"for example, by editing the profile: aiidalab-launch profile edit {instance.profile.name}"
             )
         raise click.ClickException("Startup failed due to an unexpected error.")
     except asyncio.TimeoutError:

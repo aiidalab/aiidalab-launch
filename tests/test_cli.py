@@ -53,39 +53,39 @@ def test_version_verbose_logging():
 
 def test_invalid_profile_name_throws():
     """
-    Arrange/Act: Run `profiles show invalid` subcommand.
+    Arrange/Act: Run `profile show invalid` subcommand.
     Assert:  The command throws an exception due to invalid profile name.
     """
     runner: CliRunner = CliRunner()
     with pytest.raises(ValueError):
         result: Result = runner.invoke(
-            cli.cli, ["profiles", "show", "invalid"], catch_exceptions=False
+            cli.cli, ["profile", "show", "invalid"], catch_exceptions=False
         )
     result: Result = runner.invoke(
         cli.cli,
-        ["profiles", "show", "invalid"],
+        ["profile", "show", "invalid"],
     )
     assert isinstance(result.exception, ValueError)
 
 
 def test_list_profiles():
     runner: CliRunner = CliRunner()
-    result: Result = runner.invoke(cli.cli, ["profiles", "list"])
+    result: Result = runner.invoke(cli.cli, ["profile", "list"])
     assert "default" in result.output.strip()
 
 
 def test_show_profile():
     runner: CliRunner = CliRunner()
-    result: Result = runner.invoke(cli.cli, ["profiles", "show", "default"])
+    result: Result = runner.invoke(cli.cli, ["profile", "show", "default"])
     assert Profile.loads("default", result.output) == Profile()
 
 
 def test_change_default_profile():
     runner: CliRunner = CliRunner()
-    result: Result = runner.invoke(cli.cli, ["profiles", "set-default", "default"])
+    result: Result = runner.invoke(cli.cli, ["profile", "set-default", "default"])
     assert result.exit_code == 0
     result: Result = runner.invoke(
-        cli.cli, ["profiles", "set-default", "does-not-exist"]
+        cli.cli, ["profile", "set-default", "does-not-exist"]
     )
     assert result.exit_code == 1
     assert "does not exist" in result.output
@@ -96,44 +96,44 @@ def test_add_remove_profile():
 
     # Add new-profile
     result: Result = runner.invoke(
-        cli.cli, ["profiles", "add", "new-profile"], input="n\n"
+        cli.cli, ["profile", "add", "new-profile"], input="n\n"
     )
     assert result.exit_code == 0
     assert "Added profile 'new-profile'." in result.output
 
     # Check that new-profile exists
-    result: Result = runner.invoke(cli.cli, ["profiles", "list"])
+    result: Result = runner.invoke(cli.cli, ["profile", "list"])
     assert "new-profile" in result.output
-    result: Result = runner.invoke(cli.cli, ["profiles", "show", "new-profile"])
+    result: Result = runner.invoke(cli.cli, ["profile", "show", "new-profile"])
     assert result.exit_code == 0
 
     # Try add another profile with the same name (should fail)
     result: Result = runner.invoke(
-        cli.cli, ["profiles", "add", "new-profile"], input="n\n"
+        cli.cli, ["profile", "add", "new-profile"], input="n\n"
     )
     assert result.exit_code == 1
     assert "Profile with name 'new-profile' already exists." in result.output
 
     # Try make new profile default
-    result: Result = runner.invoke(cli.cli, ["profiles", "set-default", "new-profile"])
+    result: Result = runner.invoke(cli.cli, ["profile", "set-default", "new-profile"])
     assert result.exit_code == 0
     assert "Set default profile to 'new-profile'." in result.output
     # Reset default profile
-    result: Result = runner.invoke(cli.cli, ["profiles", "set-default", "default"])
+    result: Result = runner.invoke(cli.cli, ["profile", "set-default", "default"])
     assert result.exit_code == 0
     assert "Set default profile to 'default'." in result.output
 
     # Remove new-profile
     result: Result = runner.invoke(
-        cli.cli, ["profiles", "remove", "new-profile"], input="y\n"
+        cli.cli, ["profile", "remove", "new-profile"], input="y\n"
     )
     assert result.exit_code == 0
-    result: Result = runner.invoke(cli.cli, ["profiles", "list"])
+    result: Result = runner.invoke(cli.cli, ["profile", "list"])
     assert "new-profile" not in result.output
 
     # Remove new-profile (again – should fail)
     result: Result = runner.invoke(
-        cli.cli, ["profiles", "remove", "new-profile"], input="y\n"
+        cli.cli, ["profile", "remove", "new-profile"], input="y\n"
     )
     assert result.exit_code == 1
     assert "Profile with name 'new-profile' does not exist." in result.output
@@ -142,7 +142,7 @@ def test_add_remove_profile():
 def test_add_profile_invalid_name():
     runner: CliRunner = CliRunner()
     # underscores are not allowed
-    result: Result = runner.invoke(cli.cli, ["profiles", "add", "new_profile"])
+    result: Result = runner.invoke(cli.cli, ["profile", "add", "new_profile"])
     assert result.exit_code == 1
     assert "Invalid profile name 'new_profile'." in result.output
 
@@ -175,7 +175,7 @@ class TestsAgainstStartedInstance:
 
     def test_remove_running_profile(self):
         runner: CliRunner = CliRunner()
-        result: Result = runner.invoke(cli.cli, ["profiles", "remove", "default"])
+        result: Result = runner.invoke(cli.cli, ["profile", "remove", "default"])
         assert result.exit_code == 1
         assert "is still running" in result.output
 
@@ -274,7 +274,7 @@ class TestExtraVolumes:
 
         # Add extra volume to default profile.
         config = application_state.config
-        profile = config.profiles[0]
+        profile = config.profile[0]
         assert profile.name == config.default_profile
         profile.extra_mounts = {f"{extra_volume_name}:/opt/extra:rw"}
         replace(
@@ -283,7 +283,7 @@ class TestExtraVolumes:
 
         # Check that extra volume is picked up.
         runner: CliRunner = CliRunner()
-        result = runner.invoke(cli.cli, ["profiles", "show", profile.name])
+        result = runner.invoke(cli.cli, ["profile", "show", profile.name])
         assert result.exit_code == 0
         assert extra_volume_name in result.output
 
