@@ -31,7 +31,7 @@ def _default_port() -> int:  # explicit function required to enable test patchin
     return DEFAULT_PORT
 
 
-_DEFAULT_IMAGE = "aiidalab/full-stack:latest"
+DEFAULT_IMAGE = "aiidalab/full-stack:latest"
 
 
 def _valid_volume_name(source: str) -> None:
@@ -67,7 +67,7 @@ class Profile:
     port: int | None = field(default_factory=_default_port)
     default_apps: list[str] = field(default_factory=lambda: [])
     system_user: str = "jovyan"
-    image: str = _DEFAULT_IMAGE
+    image: str = DEFAULT_IMAGE
     home_mount: str | None = None
     extra_mounts: set[str] = field(default_factory=set)
 
@@ -159,8 +159,8 @@ class Profile:
         system_user = get_docker_env(container, "SYSTEM_USER")
 
         image_tag = (
-            _DEFAULT_IMAGE
-            if _DEFAULT_IMAGE in container.image.tags
+            DEFAULT_IMAGE
+            if DEFAULT_IMAGE in container.image.tags
             else container.image.tags[0]
         )
 
