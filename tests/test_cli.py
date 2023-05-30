@@ -274,7 +274,7 @@ class TestExtraVolumes:
 
         # Add extra volume to default profile.
         config = application_state.config
-        profile = config.profile[0]
+        profile = config.profiles[0]
         assert profile.name == config.default_profile
         profile.extra_mounts = {f"{extra_volume_name}:/opt/extra:rw"}
         replace(
