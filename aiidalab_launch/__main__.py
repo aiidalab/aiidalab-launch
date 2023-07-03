@@ -342,7 +342,7 @@ async def _async_start(
     else:
         # use local image
         msg = f"Using local image '{profile.image}'."
-    
+
     if instance.image is None:
         raise click.ClickException(
             f"Unable to find image '{profile.image}'. "
