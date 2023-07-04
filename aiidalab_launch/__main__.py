@@ -20,7 +20,7 @@ from tabulate import tabulate
 from .application_state import ApplicationState
 from .core import LOGGER
 from .instance import AiidaLabInstance
-from .profile import DEFAULT_PORT, Profile
+from .profile import DEFAULT_IMAGE, DEFAULT_PORT, Profile
 from .util import confirm_with_value, get_latest_version, spinner, webbrowser_available
 from .version import __version__
 
@@ -187,9 +187,14 @@ def show_profile(app_state, profile):
     type=click.Path(file_okay=False),
     help="Specify the path to be mounted as home directory.",
 )
+@click.option(
+    "--image",
+    type=click.STRING,
+    help="Specify the image to be used for the profile.",
+)
 @pass_app_state
 @click.pass_context
-def add_profile(ctx, app_state, port, home_mount, profile):
+def add_profile(ctx, app_state, port, home_mount, image, profile):
     """Add a new AiiDAlab profile to the configuration."""
     try:
         app_state.config.get_profile(profile)
@@ -201,11 +206,13 @@ def add_profile(ctx, app_state, port, home_mount, profile):
     # Determine next available port or use the one provided by the user.
     configured_ports = [prof.port for prof in app_state.config.profiles if prof.port]
     port = port or (max(configured_ports, default=-1) + 1) or DEFAULT_PORT
+    image = image or DEFAULT_IMAGE
 
     try:
         new_profile = Profile(
             name=profile,
             port=port,
+            image=image,
             home_mount=home_mount,
         )
     except ValueError as error:  # invalid profile name

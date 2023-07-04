@@ -62,7 +62,7 @@ def _select_default_image(monkeypatch_session, pytestconfig):
     _default_image = pytestconfig.getoption("default_image")
     if _default_image is not None:
         monkeypatch_session.setattr(
-            aiidalab_launch.profile, "_DEFAULT_IMAGE", _default_image
+            aiidalab_launch.profile, "DEFAULT_IMAGE", _default_image
         )
     yield None
 
@@ -70,7 +70,7 @@ def _select_default_image(monkeypatch_session, pytestconfig):
 @pytest.fixture(scope="session", autouse=True)
 def _pull_docker_image(docker_client):
     try:
-        docker_client.images.pull(aiidalab_launch.profile._DEFAULT_IMAGE)
+        docker_client.images.pull(aiidalab_launch.profile.DEFAULT_IMAGE)
     except docker.errors.APIError:
         pytest.skip("unable to pull docker image")
 
