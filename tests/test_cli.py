@@ -154,7 +154,7 @@ def test_add_profile_with_options():
     result: Result = runner.invoke(
         cli.cli,
         [
-            "profiles",
+            "profile",
             "add",
             "new-profile",
             "--port",
@@ -168,7 +168,7 @@ def test_add_profile_with_options():
     )
     assert result.exit_code == 0
 
-    result: Result = runner.invoke(cli.cli, ["profiles", "show", "new-profile"])
+    result: Result = runner.invoke(cli.cli, ["profile", "show", "new-profile"])
     assert "aiidalab/full-stack:edge" in result.output
 
 
