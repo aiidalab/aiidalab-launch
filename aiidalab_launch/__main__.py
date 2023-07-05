@@ -336,14 +336,19 @@ async def _async_start(
             )
 
     # Obtain image (either via pull or local).
-    if pull:
-        msg = (
-            f"Downloading image '{instance.profile.image}', this may take a while..."
-            if instance.image is None
-            else f"Downloading latest version of '{instance.profile.image}'..."
-        )
+    if instance.image is None:
+        # always pull if no image is available
+        msg = f"Downloading image '{profile.image}', this may take a while..."
         with spinner(msg):
             instance.pull()
+    elif pull:
+        # pull if explicitly requested and pull latest version of image
+        msg = f"Downloading latest version of '{profile.image}'..."
+        with spinner(msg):
+            instance.pull()
+    else:
+        # use local image
+        msg = f"Using local image '{profile.image}'."
 
     if instance.image is None:
         raise click.ClickException(
@@ -506,7 +511,7 @@ async def _async_start(
 )
 @click.option(
     "--pull/--no-pull",
-    default=True,
+    default=False,
     help=(
         "Specify whether to pull the configured image prior to the first start "
         "of the container."
