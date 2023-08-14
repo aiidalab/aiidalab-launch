@@ -229,14 +229,19 @@ def add_profile(ctx, app_state, port, home_mount, image, profile):
 @click.argument("profile")
 @click.option("--yes", is_flag=True, help="Do not ask for confirmation.")
 @click.option("-f", "--force", is_flag=True, help="Proceed, ignoring any warnings.")
+@click.option("--purge", is_flag=True, help="Remove all data associated with profile.")
 @pass_app_state
-def remove_profile(app_state, profile, yes, force):
+@click.pass_context
+def remove_profile(ctx, app_state, profile, yes, force, purge):
     """Remove an AiiDAlab profile from the configuration."""
     try:
         profile = app_state.config.get_profile(profile)
     except ValueError:
         raise click.ClickException(f"Profile with name '{profile}' does not exist.")
     else:
+        if purge:
+            ctx.invoke(reset, profile=profile, yes=yes) 
+
         if not force:
             instance = AiidaLabInstance(client=app_state.docker_client, profile=profile)
             status = asyncio.run(instance.status())
