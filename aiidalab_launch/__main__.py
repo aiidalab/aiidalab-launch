@@ -234,11 +234,12 @@ def add_profile(ctx, app_state, port, home_mount, image, profile):
 @click.pass_context
 def remove_profile(ctx, app_state, profile, yes, force, purge):
     """Remove an AiiDAlab profile from the configuration."""
-    for profile in profile:
+    profile_lst = profile
+    for prof in profile_lst:
         try:
-            profile = app_state.config.get_profile(profile)
+            profile = app_state.config.get_profile(prof)
         except ValueError:
-            raise click.ClickException(f"Profile with name '{profile}' does not exist.")
+            raise click.ClickException(f"Profile with name '{prof}' does not exist.")
         else:
             if purge:
                 ctx.invoke(reset, profile=profile, yes=yes)
