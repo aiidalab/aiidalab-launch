@@ -226,7 +226,7 @@ def add_profile(ctx, app_state, port, home_mount, image, profile):
 
 
 @profile.command("remove")
-@click.argument("profile")
+@click.argument("profile", nargs=-1, required=True)
 @click.option("--yes", is_flag=True, help="Do not ask for confirmation.")
 @click.option("-f", "--force", is_flag=True, help="Proceed, ignoring any warnings.")
 @click.option("--purge", is_flag=True, help="Remove all data associated with profile.")
@@ -234,34 +234,35 @@ def add_profile(ctx, app_state, port, home_mount, image, profile):
 @click.pass_context
 def remove_profile(ctx, app_state, profile, yes, force, purge):
     """Remove an AiiDAlab profile from the configuration."""
-    try:
-        profile = app_state.config.get_profile(profile)
-    except ValueError:
-        raise click.ClickException(f"Profile with name '{profile}' does not exist.")
-    else:
-        if purge:
-            ctx.invoke(reset, profile=profile, yes=yes) 
+    for profile in profile:
+        try:
+            profile = app_state.config.get_profile(profile)
+        except ValueError:
+            raise click.ClickException(f"Profile with name '{profile}' does not exist.")
+        else:
+            if purge:
+                ctx.invoke(reset, profile=profile, yes=yes) 
 
-        if not force:
-            instance = AiidaLabInstance(client=app_state.docker_client, profile=profile)
-            status = asyncio.run(instance.status())
-            if status not in (
-                instance.AiidaLabInstanceStatus.DOWN,
-                instance.AiidaLabInstanceStatus.CREATED,
-                instance.AiidaLabInstanceStatus.EXITED,
+            if not force:
+                instance = AiidaLabInstance(client=app_state.docker_client, profile=profile)
+                status = asyncio.run(instance.status())
+                if status not in (
+                    instance.AiidaLabInstanceStatus.DOWN,
+                    instance.AiidaLabInstanceStatus.CREATED,
+                    instance.AiidaLabInstanceStatus.EXITED,
+                ):
+                    raise click.ClickException(
+                        f"The instance associated with profile '{profile.name}' "
+                        "is still running. Use the -f/--force option to remove the "
+                        "profile anyways."
+                    )
+
+            if yes or click.confirm(
+                f"Are you sure you want to remove profile '{profile.name}'?"
             ):
-                raise click.ClickException(
-                    f"The instance associated with profile '{profile.name}' "
-                    "is still running. Use the -f/--force option to remove the "
-                    "profile anyways."
-                )
-
-        if yes or click.confirm(
-            f"Are you sure you want to remove profile '{profile.name}'?"
-        ):
-            app_state.config.profiles.remove(profile)
-            app_state.save_config()
-            click.echo(f"Removed profile with name '{profile.name}'.")
+                app_state.config.profiles.remove(profile)
+                app_state.save_config()
+                click.echo(f"Removed profile with name '{profile.name}'.")
 
 
 @profile.command("edit")
