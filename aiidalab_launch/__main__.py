@@ -239,7 +239,6 @@ def remove_profile(ctx, app_state, profile, yes, force, purge):
     except ValueError:
         raise click.ClickException(f"Profile with name '{profile}' does not exist.")
     else:
-
         if not force:
             instance = AiidaLabInstance(client=app_state.docker_client, profile=profile)
             status = asyncio.run(instance.status())
