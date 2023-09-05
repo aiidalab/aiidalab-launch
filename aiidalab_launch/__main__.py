@@ -239,8 +239,6 @@ def remove_profile(ctx, app_state, profile, yes, force, purge):
     except ValueError:
         raise click.ClickException(f"Profile with name '{profile}' does not exist.")
     else:
-        if purge:
-            ctx.invoke(reset, profile=profile, yes=yes)
 
         if not force:
             instance = AiidaLabInstance(client=app_state.docker_client, profile=profile)
@@ -262,6 +260,9 @@ def remove_profile(ctx, app_state, profile, yes, force, purge):
             app_state.config.profiles.remove(profile)
             app_state.save_config()
             click.echo(f"Removed profile with name '{profile.name}'.")
+
+    if purge:
+        ctx.invoke(reset, profile=profile, yes=yes)
 
 
 @profile.command("edit")
