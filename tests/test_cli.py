@@ -107,6 +107,7 @@ def test_add_remove_profile():
     # Check that new-profile exists
     result: Result = runner.invoke(cli.cli, ["profile", "list"])
     assert "new-profile" in result.output
+    assert "second-profile" in result.output
     result: Result = runner.invoke(cli.cli, ["profile", "show", "new-profile"])
     assert result.exit_code == 0
 
