@@ -225,3 +225,26 @@ def get_docker_env(container: docker.models.containers.Container, env_name: str)
     except KeyError:
         pass
     raise KeyError(env_name)
+
+
+def image_is_latest(docker_client, image: str):
+    """Check if the local image has the same digest as the image
+    on remote registry.
+    """
+    try:
+        local_image = docker_client.images.get(image)
+    except docker.errors.ImageNotFound:
+        return False
+
+    try:
+        remote_image = docker_client.images.get_registry_data(image)
+    except docker.errors.APIError:
+        return False
+
+    # There is no need to check creation date of the image, since the once
+    # there is a new image with the same tag, the id will be different.
+    # We can not use image id, see https://windsock.io/explaining-docker-image-ids/
+    local_digest = local_image.attrs.get("RepoDigests")[0].split("@")[-1]
+    remote_digest = remote_image.attrs.get("Descriptor", {}).get("digest")
+
+    return local_digest == remote_digest

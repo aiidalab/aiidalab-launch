@@ -21,7 +21,13 @@ from .application_state import ApplicationState
 from .core import LOGGER
 from .instance import AiidaLabInstance
 from .profile import DEFAULT_IMAGE, DEFAULT_PORT, Profile
-from .util import confirm_with_value, get_latest_version, spinner, webbrowser_available
+from .util import (
+    confirm_with_value,
+    get_latest_version,
+    image_is_latest,
+    spinner,
+    webbrowser_available,
+)
 from .version import __version__
 
 MSG_MOUNT_POINT_CONFLICT = """Warning: There is at least one other running
@@ -349,6 +355,13 @@ async def _async_start(
     else:
         # use local image
         msg = f"Using local image '{profile.image}'."
+
+        # check if local image is outdated and pull latest version if so
+        if not image_is_latest(instance.client, profile.image):
+            click.secho(
+                "Warning! Local image is outdated, please run with --pull to update.",
+                fg="yellow",
+            )
 
     if instance.image is None:
         raise click.ClickException(
