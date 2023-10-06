@@ -359,12 +359,6 @@ async def _async_start(
                 fg="yellow",
             )
 
-    if instance.image is None:
-        raise click.ClickException(
-            f"Unable to find image '{profile.image}'. "
-            "Try to use '--pull' to pull the image prior to start."
-        )
-
     # Check if the container configuration has changed.
     if instance.container:
         configuration_changed = any(instance.configuration_changes())
