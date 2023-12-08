@@ -12,7 +12,7 @@ AiiDAlab Launch makes it easy to run AiiDAlab on your own workstation or laptop.
 
 To use AiiDAlab launch you will have to
 
-1. [Install Docker on your workstation or laptop.](https://docs.docker.com/get-docker/)
+1. [Install Docker on your workstation or laptop.](https://docs.docker.com/get-docker/) (you can also use Podman, [see below](README.md#using-podman))
 2. Install AiiDAlab launch with [pipx](https://pypa.github.io/pipx/installation/) (**recommended**):
 
    ```console
@@ -69,6 +69,17 @@ Please see [here](ssh-forward.md) for instructions on how to run AiiDAlab on a r
 ## Compatibility
 
 This package follows the Python compatibility and deprecation schedule specified by [NEP 29](https://numpy.org/neps/nep-0029-deprecation_policy.html).
+
+### Using Podman instead of Docker
+
+You should be able to use Podman as as a drop-in replacement for Docker, with just a little extra setup. The following was tested on Fedora 39 which comes with Podman pre-installed.
+
+```console
+systemctl --user enable podman.socket
+systemctl --user start podman.socket
+systemctl --user status podman.socket
+export DOCKER_HOST=unix:///run/user/$UID/podman/podman.sock
+```
 
 ## Development
 
@@ -162,7 +173,7 @@ SOFTWARE.
 ## Acknowledgements
 
 This work is supported by the
-[MARVEL National Centre for Competency in Research](<http://nccr-marvel.ch>) funded by the [Swiss National Science Foundation](<http://www.snf.ch/en>),
+[MARVEL National Centre for Competency in Research](<https://nccr-marvel.ch>) funded by the [Swiss National Science Foundation](<https://www.snf.ch/en>),
 the MARKETPLACE project funded by [Horizon 2020](https://ec.europa.eu/programmes/horizon2020/) under the H2020-NMBP-25-2017 call (Grant No. 760173),
 as well as by the [MaX
 European Centre of Excellence](<http://www.max-centre.eu/>) funded by the Horizon 2020 EINFRA-5 program,
