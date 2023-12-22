@@ -49,8 +49,8 @@ def _get_configured_host_port(container: Container) -> int | None:
     try:
         host_config = container.attrs["HostConfig"]
         return int(host_config["PortBindings"]["8888/tcp"][0]["HostPort"]) or None
-    except (KeyError, IndexError, ValueError):
-        pass
+    except (KeyError, IndexError, ValueError) as e:
+        raise
     return None
 
 
@@ -158,11 +158,13 @@ class Profile:
 
         system_user = get_docker_env(container, "SYSTEM_USER")
 
+        print(container.image.tags)
         image_tag = (
             DEFAULT_IMAGE
             if DEFAULT_IMAGE in container.image.tags
             else container.image.tags[0]
         )
+        print(f"{image_tag!r}")
 
         extra_destinations: list[PurePosixPath] = [
             PurePosixPath(mount["Destination"])
@@ -177,6 +179,8 @@ class Profile:
                 extra_mounts.add(":".join([str(src), str(dst), "ro"]))
             else:
                 extra_mounts.add(":".join([str(src), str(dst), "rw"]))
+
+        print(_get_configured_host_port(container))
 
         return Profile(
             name=profile_name,

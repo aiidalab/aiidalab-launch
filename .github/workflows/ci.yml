@@ -34,7 +34,7 @@ jobs:
                 python-version: ['3.8', '3.9', '3.10', '3.11']
                 default-image:
                     - ''  # use the application default
-                    - aiidalab/aiidalab-docker-stack:latest
+                    - aiidalab/aiidalab-docker-stack:latest  # This is the old stack
 
         steps:
 
@@ -55,7 +55,7 @@ jobs:
 
             - name: Run tests
               run: |
-                  pytest -sv --slow --default-image=${{ matrix.default-image }}
+                  pytest -svv --slow --default-image=${{ matrix.default-image }}
                   coverage xml
 
             - name: Upload coverage to Codecov
