@@ -5,7 +5,7 @@ ci:
 repos:
 
     - repo: https://github.com/pre-commit/pre-commit-hooks
-      rev: v4.4.0
+      rev: v4.5.0
       hooks:
           - id: check-json
           - id: check-yaml
@@ -23,7 +23,7 @@ repos:
           - id: check-manifest
 
     - repo: https://github.com/psf/black
-      rev: 23.9.1
+      rev: 23.12.1
       hooks:
           - id: black
             exclude: ^docs/
@@ -38,7 +38,7 @@ repos:
                 - flake8-unused-arguments==0.0.9
 
     - repo: https://github.com/pre-commit/mirrors-mypy
-      rev: v1.5.1
+      rev: v1.8.0
       hooks:
           - id: mypy
             additional_dependencies:
@@ -48,23 +48,23 @@ repos:
                 - types-toml
 
     - repo: https://github.com/asottile/setup-cfg-fmt
-      rev: v2.4.0
+      rev: v2.5.0
       hooks:
           - id: setup-cfg-fmt
 
     - repo: https://github.com/pycqa/isort
-      rev: 5.12.0
+      rev: 5.13.2
       hooks:
           - id: isort
             args: [--profile, black, --filter-files]
 
     - repo: https://github.com/sirosen/check-jsonschema
-      rev: 0.27.0
+      rev: 0.27.3
       hooks:
           - id: check-github-workflows
 
     - repo: https://github.com/asottile/pyupgrade
-      rev: v3.13.0
+      rev: v3.15.0
       hooks:
           - id: pyupgrade
             args: [--py38-plus]
