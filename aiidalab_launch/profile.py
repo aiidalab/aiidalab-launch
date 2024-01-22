@@ -86,6 +86,7 @@ class Profile:
 
         _valid_volume_name(self.home_mount)
 
+        """ This looks like it's not needed?
         # Normalize extra mount mode to be "rw" by default
         # so that we match Docker default but are explicit.
         for extra_mount in self.extra_mounts:
@@ -93,6 +94,7 @@ class Profile:
             if len(extra_mount.split(":")) == 2:
                 self.extra_mounts.remove(extra_mount)
                 self.extra_mounts.add(f"{extra_mount}:rw")
+        """
 
         if (
             self.image.split(":")[0] == "aiidalab/full-stack"
