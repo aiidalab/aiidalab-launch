@@ -49,7 +49,7 @@ def _get_configured_host_port(container: Container) -> int | None:
     try:
         host_config = container.attrs["HostConfig"]
         return int(host_config["PortBindings"]["8888/tcp"][0]["HostPort"]) or None
-    except (KeyError, IndexError, ValueError) as e:
+    except (KeyError, IndexError, ValueError):
         raise
     return None
 
