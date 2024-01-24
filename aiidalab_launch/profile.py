@@ -88,7 +88,7 @@ class Profile:
 
         # Normalize extra mount mode to be "rw" by default
         # so that we match Docker default but are explicit.
-        for extra_mount in self.extra_mounts:
+        for extra_mount in self.extra_mounts.copy():
             self.parse_extra_mount(extra_mount)
             if len(extra_mount.split(":")) == 2:
                 self.extra_mounts.remove(extra_mount)
