@@ -142,8 +142,10 @@ def instance(docker_client, profile):
 
     def remove_extra_mounts():
         for extra_mount in instance.profile.extra_mounts:
-            extra_volume, _, _, mount_type = instance.profile.parse_extra_mount(extra_mount)
-            if mount_type == 'volume':
+            extra_volume, _, _, mount_type = instance.profile.parse_extra_mount(
+                extra_mount
+            )
+            if mount_type == "volume":
                 docker_client.volumes.get(str(extra_volume)).remove()
 
     for op in (

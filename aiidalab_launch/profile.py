@@ -61,7 +61,7 @@ def _get_aiidalab_default_apps(container: Container) -> list:
     except KeyError:
         return []
 
-@dataclass 
+@dataclass
 class ExtraMount:
     source: str
     target: str
