@@ -74,7 +74,7 @@ This package follows the Python compatibility and deprecation schedule specified
 
 ### Setting up a development environment
 
-To develop this package, first clone it and then install the development dependencies with `pip install -e '.[dev,pre_commit]'`.
+To develop this package, first clone it and then install the development dependencies with `pip install -e '.[dev]'`.
 We recommend to install the [pre-commit](https://pre-commit.com/) hooks to avoid unnecessary iterations when pushing new changes.
 To install the pre-commit hooks, switch into the repository root directly and execute:
 ```console
