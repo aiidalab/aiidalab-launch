@@ -61,6 +61,15 @@ def _get_aiidalab_default_apps(container: Container) -> list:
     except KeyError:
         return []
 
+@dataclass 
+class ExtraMount:
+    source: str
+    target: str
+    mode: str # TOOD: Make this a Literal
+    type: str
+
+    @classmethod
+    def from_string(cls, string):
 
 @dataclass
 class Profile:
@@ -90,10 +99,10 @@ class Profile:
         # Normalize extra mount mode to be "rw" by default
         # so that we match Docker default but are explicit.
         for extra_mount in self.extra_mounts.copy():
-            _, _, rw_mode, _ = self.parse_extra_mount(extra_mount)
+            _, _, mode, _ = self.parse_extra_mount(extra_mount)
             if len(extra_mount.split(":")) == 2:
                 self.extra_mounts.remove(extra_mount)
-                self.extra_mounts.add(f"{extra_mount}:{rw_mode}")
+                self.extra_mounts.add(f"{extra_mount}:{mode}")
 
         if (
             self.image.split(":")[0] == "aiidalab/full-stack"
@@ -126,9 +135,8 @@ class Profile:
 
         # By default, extra mounts are writeable
         mode = fields[2] if len(fields) == 3 else "rw"
-        # TODO: Convert to enum
         if mode not in ("ro", "rw"):
-            raise ValueError(f"Invalid extra mount mode '{mode}'")
+            raise ValueError(f"Invalid extra mount mode '{mode}' in '{extra_mount}''")
 
         return source_path, target_path, mode, mount_type
 
