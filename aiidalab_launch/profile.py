@@ -34,15 +34,16 @@ def _default_port() -> int:  # explicit function required to enable test patchin
 DEFAULT_IMAGE = "aiidalab/full-stack:latest"
 
 
-def _valid_volume_name(source: str) -> None:
+def _get_mount_type(source: str) -> str:
     # We do not allow relative paths so if the path is not absolute,
     # we assume volume mount, whose name is restricted by Docker.
-    if not Path(source).is_absolute() and not re.fullmatch(
-        _REGEX_VALID_IMAGE_NAMES, source
-    ):
+    if Path(source).is_absolute():
+        return "bind"
+    if not re.fullmatch(_REGEX_VALID_IMAGE_NAMES, source):
         raise ValueError(
             f"Invalid extra mount volume name '{source}'. Use absolute path for bind mounts."
         )
+    return "volume"
 
 
 def _get_configured_host_port(container: Container) -> int | None:
@@ -84,15 +85,15 @@ class Profile:
         if self.home_mount is None:
             self.home_mount = f"{CONTAINER_PREFIX}{self.name}_home"
 
-        _valid_volume_name(self.home_mount)
+        _ = _get_mount_type(self.home_mount)
 
         # Normalize extra mount mode to be "rw" by default
         # so that we match Docker default but are explicit.
         for extra_mount in self.extra_mounts.copy():
-            self.parse_extra_mount(extra_mount)
+            _, _, rw_mode, _ = self.parse_extra_mount(extra_mount)
             if len(extra_mount.split(":")) == 2:
                 self.extra_mounts.remove(extra_mount)
-                self.extra_mounts.add(f"{extra_mount}:rw")
+                self.extra_mounts.add(f"{extra_mount}:{rw_mode}")
 
         if (
             self.image.split(":")[0] == "aiidalab/full-stack"
@@ -105,28 +106,31 @@ class Profile:
     def container_name(self) -> str:
         return f"{CONTAINER_PREFIX}{self.name}"
 
+    # TODO: Return the mount type ("bind" or "volume")
+    # TODO: Return mode, and mount type as enums
     def parse_extra_mount(
         self, extra_mount: str
-    ) -> tuple[Path, PurePosixPath, str | None]:
+    ) -> tuple[Path, PurePosixPath, str, str]:
         fields = extra_mount.split(":")
         if len(fields) < 2 or len(fields) > 3:
             raise ValueError(f"Invalid extra mount option '{extra_mount}'")
 
         source, target = fields[:2]
-        _valid_volume_name(source)
+        mount_type = _get_mount_type(source)
 
         source_path, target_path = Path(source), PurePosixPath(target)
         # Unlike for home_mount, we will not auto-create missing
         # directories for extra mounts.
-        if source_path.is_absolute() and not source_path.exists():
+        if mount_type == "bind" and not source_path.exists():
             raise ValueError(f"Directory '{source}' does not exist")
 
         # By default, extra mounts are writeable
         mode = fields[2] if len(fields) == 3 else "rw"
+        # TODO: Convert to enum
         if mode not in ("ro", "rw"):
             raise ValueError(f"Invalid extra mount mode '{mode}'")
 
-        return source_path, target_path, mode
+        return source_path, target_path, mode, mount_type
 
     def conda_volume_name(self) -> str:
         return f"{self.container_name()}_conda"

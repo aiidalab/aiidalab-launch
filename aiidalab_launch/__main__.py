@@ -54,7 +54,7 @@ more detailed instructions on SSH port forwarding.
 
 Home mounted: {home_mount} -> /home/{system_user}"""
 
-MSG_EXTRA_VOLUME = "Extra volume mounted: {source} -> {target} {mode}"
+MSG_EXTRA_MOUNT = "Extra {mount_type} mount: {source} -> {target} {rw_mode}"
 
 
 LOGGING_LEVELS = {
@@ -473,12 +473,15 @@ async def _async_start(
             )
 
             for extra_mount in profile.extra_mounts:
-                source, target, mode = profile.parse_extra_mount(extra_mount)
+                source, target, rw_mode, mount_type = profile.parse_extra_mount(
+                    extra_mount
+                )
                 click.secho(
-                    MSG_EXTRA_VOLUME.format(
+                    MSG_EXTRA_MOUNT.format(
                         source=source,
                         target=target,
-                        mode=f"({mode})" if mode else "",
+                        rw_mode=rw_mode,
+                        mount_type=mount_type,
                     ).lstrip(),
                     fg="green",
                 )

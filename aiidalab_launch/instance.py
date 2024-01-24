@@ -115,12 +115,14 @@ class AiidaLabInstance:
         )
 
     def _extra_mount(self, extra_mount: str) -> docker.types.Mount:
-        source_path, target_path, mode = self.profile.parse_extra_mount(extra_mount)
+        source_path, target_path, mode, mount_type = self.profile.parse_extra_mount(
+            extra_mount
+        )
         return docker.types.Mount(
             target=str(target_path),
             source=str(source_path),
             read_only=True if mode == "ro" else False,
-            type="bind" if source_path.is_absolute() else "volume",
+            type=mount_type,
         )
 
     def _mounts(self) -> Generator[docker.types.Mount, None, None]:
