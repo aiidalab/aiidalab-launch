@@ -32,7 +32,18 @@ def _default_port() -> int:  # explicit function required to enable test patchin
     return DEFAULT_PORT
 
 
-DEFAULT_IMAGE = "docker.io/aiidalab/full-stack:latest"
+DEFAULT_IMAGE = "aiidalab/full-stack:latest"
+
+
+def _valid_volume_name(source: str) -> None:
+    # We do not allow relative paths so if the path is not absolute,
+    # we assume volume mount, whose name is restricted by Docker.
+    if not Path(source).is_absolute() and not re.fullmatch(
+        _REGEX_VALID_IMAGE_NAMES, source
+    ):
+        raise docker.errors.InvalidArgument(
+            f"Invalid extra mount volume name '{source}'. Use absolute path for bind mounts."
+        )
 
 
 def _get_configured_host_port(container: Container) -> int | None:
@@ -52,18 +63,39 @@ def _get_aiidalab_default_apps(container: Container) -> list:
 
 
 # We extend the Mount type from Docker API
-# with some extra validation to fail early if user provide wrong argument.
+# with some extra validation to fail early if user provides wrong argument.
 # https://github.com/docker/docker-py/blob/bd164f928ab82e798e30db455903578d06ba2070/docker/types/services.py#L305
 class ExtraMount(docker.types.Mount):
     @classmethod
-    def parse_mount_string(cls, mount) -> docker.types.Mount:
-        mount = super().parse_mount_string(mount)
+    def parse_mount_string(cls, mount_str) -> docker.types.Mount:
+        mount = super().parse_mount_string(mount_str)
+        # For some reason, Docker API allows Source to be None??
+        # Not on our watch!
+        if mount["Source"] is None:
+            raise docker.errors.InvalidArgument(
+                f"Invalid extra mount specification '{mount}'"
+            )
+
+        # If the read-write mode is not "rw", docker assumes "ro"
+        # Let's be more strict here to avoid confusing errors later.
+        parts = mount_str.split(":")
+        if len(parts) == 3:
+            mode = parts[2]
+            if mode not in ("ro", "rw"):
+                raise docker.errors.InvalidArgument(
+                    f"Invalid read-write mode in '{mount}'"
+                )
+
         # Unlike for home_mount, we will not auto-create missing
         # directories for extra mounts.
         if mount["Type"] == "bind":
             source_path = Path(mount["Source"])
             if not source_path.exists():
-                raise ValueError(f"Directory '{source_path}' does not exist!")
+                raise docker.errors.InvalidArgument(
+                    f"Directory '{source_path}' does not exist!"
+                )
+        else:
+            _valid_volume_name(mount["Source"])
         return mount
 
 
@@ -89,6 +121,8 @@ class Profile:
             )
         if self.home_mount is None:
             self.home_mount = f"{CONTAINER_PREFIX}{self.name}_home"
+
+        _valid_volume_name(self.home_mount)
 
         # Normalize extra mount mode to be "rw" by default
         # so that we match Docker default but are explicit.

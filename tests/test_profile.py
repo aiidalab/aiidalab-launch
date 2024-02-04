@@ -1,6 +1,7 @@
 from dataclasses import replace
 from pathlib import Path
 
+import docker
 import pytest
 
 from aiidalab_launch.profile import Profile
@@ -57,7 +58,7 @@ def test_profile_init_valid_home_mounts(profile, extra_volume_name, home_mount):
 @pytest.mark.parametrize("home_mount", INVALID_HOME_MOUNTS)
 def test_profile_init_invalid_home_mounts(profile, extra_volume_name, home_mount):
     home_mount = home_mount.format(path=Path.home(), vol=extra_volume_name)
-    with pytest.raises(ValueError):
+    with pytest.raises(docker.errors.InvalidArgument):
         replace(profile, home_mount=home_mount)
 
 
@@ -70,7 +71,7 @@ def test_profile_init_valid_extra_mounts(profile, extra_volume_name, extra_mount
 @pytest.mark.parametrize("extra_mount", INVALID_EXTRA_MOUNTS)
 def test_profile_init_invalid_extra_mounts(profile, extra_volume_name, extra_mount):
     extra_mounts = {extra_mount.format(path=Path.home(), vol=extra_volume_name)}
-    with pytest.raises(ValueError):
+    with pytest.raises(docker.errors.InvalidArgument):
         replace(profile, extra_mounts=extra_mounts)
 
 
