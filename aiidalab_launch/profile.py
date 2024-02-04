@@ -7,6 +7,7 @@ from dataclasses import asdict, dataclass, field
 from pathlib import Path, PurePosixPath
 from urllib.parse import quote_plus
 
+import docker
 import toml
 from docker.models.containers import Container
 
@@ -31,19 +32,7 @@ def _default_port() -> int:  # explicit function required to enable test patchin
     return DEFAULT_PORT
 
 
-DEFAULT_IMAGE = "aiidalab/full-stack:latest"
-
-
-def _get_mount_type(source: str) -> str:
-    # We do not allow relative paths so if the path is not absolute,
-    # we assume volume mount, whose name is restricted by Docker.
-    if Path(source).is_absolute():
-        return "bind"
-    if not re.fullmatch(_REGEX_VALID_IMAGE_NAMES, source):
-        raise ValueError(
-            f"Invalid extra mount volume name '{source}'. Use absolute path for bind mounts."
-        )
-    return "volume"
+DEFAULT_IMAGE = "docker.io/aiidalab/full-stack:latest"
 
 
 def _get_configured_host_port(container: Container) -> int | None:
@@ -62,34 +51,20 @@ def _get_aiidalab_default_apps(container: Container) -> list:
         return []
 
 
-@dataclass
-class ExtraMount:
-    source: Path
-    target: PurePosixPath
-    mode: str  # TOOD: Make this a Literal
-    type: str
-
+# We extend the Mount type from Docker API
+# with some extra validation to fail early if user provide wrong argument.
+# https://github.com/docker/docker-py/blob/bd164f928ab82e798e30db455903578d06ba2070/docker/types/services.py#L305
+class ExtraMount(docker.types.Mount):
     @classmethod
-    def from_string(cls, mount) -> ExtraMount:
-        fields = mount.split(":")
-        if len(fields) < 2 or len(fields) > 3:
-            raise ValueError(f"Invalid extra mount option '{mount}'")
-
-        source, target = fields[:2]
-        mount_type = _get_mount_type(source)
-
-        source_path, target_path = Path(source), PurePosixPath(target)
+    def parse_mount_string(cls, mount) -> docker.types.Mount:
+        mount = super().parse_mount_string(mount)
         # Unlike for home_mount, we will not auto-create missing
         # directories for extra mounts.
-        if mount_type == "bind" and not source_path.exists():
-            raise ValueError(f"Directory '{source}' does not exist")
-
-        # By default, extra mounts are writeable
-        mode = fields[2] if len(fields) == 3 else "rw"
-        if mode not in ("ro", "rw"):
-            raise ValueError(f"Invalid extra mount mode '{mode}' in '{mount}''")
-
-        return ExtraMount(source_path, target_path, mode, mount_type)
+        if mount["Type"] == "bind":
+            source_path = Path(mount["Source"])
+            if not source_path.exists():
+                raise ValueError(f"Directory '{source_path}' does not exist!")
+        return mount
 
 
 @dataclass
@@ -115,20 +90,20 @@ class Profile:
         if self.home_mount is None:
             self.home_mount = f"{CONTAINER_PREFIX}{self.name}_home"
 
-        _ = _get_mount_type(self.home_mount)
-
         # Normalize extra mount mode to be "rw" by default
         # so that we match Docker default but are explicit.
         for extra_mount in self.extra_mounts.copy():
-            mount = ExtraMount.from_string(extra_mount)
-            if not extra_mount.endswith(mount.mode):
+            mount = ExtraMount.parse_mount_string(extra_mount)
+            mode = "ro" if mount["ReadOnly"] else "rw"
+            if not extra_mount.endswith(mode):
                 self.extra_mounts.remove(extra_mount)
-                self.extra_mounts.add(f"{extra_mount}:{mount.mode}")
+                self.extra_mounts.add(f"{extra_mount}:{mode}")
 
         if (
-            self.image.split(":")[0] == "aiidalab/full-stack"
+            self.image.split(":")[0].endswith("aiidalab/full-stack")
             and self.system_user != "jovyan"
         ):
+            # TODO: ERROR out in this case
             LOGGER.warning(
                 "Resetting the system user may create issues for this image!"
             )

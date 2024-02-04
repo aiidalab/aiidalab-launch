@@ -473,13 +473,13 @@ async def _async_start(
             )
 
             for extra_mount in profile.extra_mounts:
-                mount = ExtraMount.from_string(extra_mount)
+                mount = ExtraMount.parse_mount_string(extra_mount)
                 click.secho(
                     MSG_EXTRA_MOUNT.format(
-                        source=mount.source,
-                        target=mount.target,
-                        mode=mount.mode,
-                        mount_type=mount.type,
+                        source=mount["Source"],
+                        target=mount["Target"],
+                        mode="ro" if mount["ReadOnly"] else "rw",
+                        mount_type=mount["Type"],
                     ).lstrip(),
                     fg="green",
                 )

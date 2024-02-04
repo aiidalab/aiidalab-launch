@@ -103,6 +103,7 @@ class AiidaLabInstance:
         return docker.types.Mount(
             target=f"/home/{self.profile.system_user}/.conda",
             source=self.profile.conda_volume_name(),
+            type="volume",
         )
 
     def _home_mount(self) -> docker.types.Mount:
@@ -115,13 +116,7 @@ class AiidaLabInstance:
         )
 
     def _extra_mount(self, extra_mount: str) -> docker.types.Mount:
-        mount = ExtraMount.from_string(extra_mount)
-        return docker.types.Mount(
-            target=str(mount.target),
-            source=str(mount.source),
-            read_only=True if mount.mode == "ro" else False,
-            type=mount.type,
-        )
+        return ExtraMount.parse_mount_string(extra_mount)
 
     def _mounts(self) -> Generator[docker.types.Mount, None, None]:
         yield self._conda_mount()

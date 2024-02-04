@@ -142,10 +142,11 @@ def instance(docker_client, profile):
 
     def remove_extra_mounts():
         for extra_mount in instance.profile.extra_mounts:
-            mount = ExtraMount.from_string(extra_mount)
-            # TODO: Rmtree
-            if mount.type == "volume":
-                docker_client.volumes.get(str(mount.source)).remove()
+            mount = ExtraMount.parse_mount_string(extra_mount)
+            # TODO: Rmtree on bind mount? Maybe for safety let's just keep them in /tmp
+            if mount["Type"] == "volume":
+                docker_client.volumes.get(mount["Source"]).remove()
+            print(mount)
 
     for op in (
         instance.stop,
@@ -154,11 +155,8 @@ def instance(docker_client, profile):
     ):
         try:
             op()
-        except (docker.errors.NotFound, RequiresContainerInstance) as error:
-            print(
-                f"WARNING: Issue while stopping/removing instance: {error}",
-                file=sys.stderr,
-            )
+        except (docker.errors.NotFound, RequiresContainerInstance):
+            pass
         except (RuntimeError, docker.errors.APIError) as error:
             print(
                 f"WARNING: Issue while stopping/removing instance: {error}",
