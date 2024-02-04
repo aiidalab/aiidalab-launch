@@ -64,14 +64,32 @@ def _get_aiidalab_default_apps(container: Container) -> list:
 
 @dataclass
 class ExtraMount:
-    source: str
-    target: str
+    source: Path
+    target: PurePosixPath
     mode: str  # TOOD: Make this a Literal
     type: str
 
-    # @classmethod
-    # def from_string(cls, string) -> ExtraMount:
-    #    pass
+    @classmethod
+    def from_string(cls, mount) -> ExtraMount:
+        fields = mount.split(":")
+        if len(fields) < 2 or len(fields) > 3:
+            raise ValueError(f"Invalid extra mount option '{mount}'")
+
+        source, target = fields[:2]
+        mount_type = _get_mount_type(source)
+
+        source_path, target_path = Path(source), PurePosixPath(target)
+        # Unlike for home_mount, we will not auto-create missing
+        # directories for extra mounts.
+        if mount_type == "bind" and not source_path.exists():
+            raise ValueError(f"Directory '{source}' does not exist")
+
+        # By default, extra mounts are writeable
+        mode = fields[2] if len(fields) == 3 else "rw"
+        if mode not in ("ro", "rw"):
+            raise ValueError(f"Invalid extra mount mode '{mode}' in '{mount}''")
+
+        return ExtraMount(source_path, target_path, mode, mount_type)
 
 
 @dataclass
@@ -102,10 +120,10 @@ class Profile:
         # Normalize extra mount mode to be "rw" by default
         # so that we match Docker default but are explicit.
         for extra_mount in self.extra_mounts.copy():
-            _, _, mode, _ = self.parse_extra_mount(extra_mount)
-            if len(extra_mount.split(":")) == 2:
+            mount = ExtraMount.from_string(extra_mount)
+            if not extra_mount.endswith(mount.mode):
                 self.extra_mounts.remove(extra_mount)
-                self.extra_mounts.add(f"{extra_mount}:{mode}")
+                self.extra_mounts.add(f"{extra_mount}:{mount.mode}")
 
         if (
             self.image.split(":")[0] == "aiidalab/full-stack"
@@ -117,31 +135,6 @@ class Profile:
 
     def container_name(self) -> str:
         return f"{CONTAINER_PREFIX}{self.name}"
-
-    # TODO: Return the mount type ("bind" or "volume")
-    # TODO: Return mode, and mount type as enums
-    def parse_extra_mount(
-        self, extra_mount: str
-    ) -> tuple[Path, PurePosixPath, str, str]:
-        fields = extra_mount.split(":")
-        if len(fields) < 2 or len(fields) > 3:
-            raise ValueError(f"Invalid extra mount option '{extra_mount}'")
-
-        source, target = fields[:2]
-        mount_type = _get_mount_type(source)
-
-        source_path, target_path = Path(source), PurePosixPath(target)
-        # Unlike for home_mount, we will not auto-create missing
-        # directories for extra mounts.
-        if mount_type == "bind" and not source_path.exists():
-            raise ValueError(f"Directory '{source}' does not exist")
-
-        # By default, extra mounts are writeable
-        mode = fields[2] if len(fields) == 3 else "rw"
-        if mode not in ("ro", "rw"):
-            raise ValueError(f"Invalid extra mount mode '{mode}' in '{extra_mount}''")
-
-        return source_path, target_path, mode, mount_type
 
     def conda_volume_name(self) -> str:
         return f"{self.container_name()}_conda"

@@ -20,7 +20,7 @@ from tabulate import tabulate
 from .application_state import ApplicationState
 from .core import LOGGER
 from .instance import AiidaLabInstance
-from .profile import DEFAULT_IMAGE, DEFAULT_PORT, Profile
+from .profile import DEFAULT_IMAGE, DEFAULT_PORT, ExtraMount, Profile
 from .util import confirm_with_value, get_latest_version, spinner, webbrowser_available
 from .version import __version__
 
@@ -473,15 +473,13 @@ async def _async_start(
             )
 
             for extra_mount in profile.extra_mounts:
-                source, target, mode, mount_type = profile.parse_extra_mount(
-                    extra_mount
-                )
+                mount = ExtraMount.from_string(extra_mount)
                 click.secho(
                     MSG_EXTRA_MOUNT.format(
-                        source=source,
-                        target=target,
-                        mode=mode,
-                        mount_type=mount_type,
+                        source=mount.source,
+                        target=mount.target,
+                        mode=mount.mode,
+                        mount_type=mount.type,
                     ).lstrip(),
                     fg="green",
                 )

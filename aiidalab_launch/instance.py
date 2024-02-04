@@ -16,7 +16,7 @@ import docker
 from docker.models.containers import Container
 
 from .core import LOGGER
-from .profile import Profile
+from .profile import ExtraMount, Profile
 from .util import _async_wrap_iter, docker_mount_for, get_docker_env
 
 
@@ -115,14 +115,12 @@ class AiidaLabInstance:
         )
 
     def _extra_mount(self, extra_mount: str) -> docker.types.Mount:
-        source_path, target_path, mode, mount_type = self.profile.parse_extra_mount(
-            extra_mount
-        )
+        mount = ExtraMount.from_string(extra_mount)
         return docker.types.Mount(
-            target=str(target_path),
-            source=str(source_path),
-            read_only=True if mode == "ro" else False,
-            type=mount_type,
+            target=str(mount.target),
+            source=str(mount.source),
+            read_only=True if mount.mode == "ro" else False,
+            type=mount.type,
         )
 
     def _mounts(self) -> Generator[docker.types.Mount, None, None]:
@@ -239,7 +237,7 @@ class AiidaLabInstance:
             try:
                 self.client.volumes.get(self.profile.conda_volume_name()).remove()
             except docker.errors.NotFound:  # already removed
-                LOGGER.debug(
+                LOGGER.info(
                     f"Failed to remove conda volume '{self.profile.conda_volume_name()}', likely already removed."
                 )
             except Exception as error:  # unexpected error

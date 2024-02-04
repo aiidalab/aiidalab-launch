@@ -26,7 +26,7 @@ import aiidalab_launch
 from aiidalab_launch.application_state import ApplicationState
 from aiidalab_launch.config import Config
 from aiidalab_launch.instance import AiidaLabInstance, RequiresContainerInstance
-from aiidalab_launch.profile import Profile
+from aiidalab_launch.profile import ExtraMount, Profile
 
 
 # Redefine event_loop fixture to be session-scoped.
@@ -78,7 +78,7 @@ def _pull_docker_image(docker_client):
 # Avoid interfering with used ports on the host system.
 @pytest.fixture(scope="session", autouse=True)
 def _default_port(monkeypatch_session):
-    monkeypatch_session.setattr(aiidalab_launch.profile, "DEFAULT_PORT", None)
+    monkeypatch_session.setattr(aiidalab_launch.profile, "DEFAULT_PORT", 7777)
     yield None
 
 
@@ -142,11 +142,10 @@ def instance(docker_client, profile):
 
     def remove_extra_mounts():
         for extra_mount in instance.profile.extra_mounts:
-            extra_volume, _, _, mount_type = instance.profile.parse_extra_mount(
-                extra_mount
-            )
-            if mount_type == "volume":
-                docker_client.volumes.get(str(extra_volume)).remove()
+            mount = ExtraMount.from_string(extra_mount)
+            # TODO: Rmtree
+            if mount.type == "volume":
+                docker_client.volumes.get(str(mount.source)).remove()
 
     for op in (
         instance.stop,
@@ -155,8 +154,11 @@ def instance(docker_client, profile):
     ):
         try:
             op()
-        except (docker.errors.NotFound, RequiresContainerInstance):
-            continue
+        except (docker.errors.NotFound, RequiresContainerInstance) as error:
+            print(
+                f"WARNING: Issue while stopping/removing instance: {error}",
+                file=sys.stderr,
+            )
         except (RuntimeError, docker.errors.APIError) as error:
             print(
                 f"WARNING: Issue while stopping/removing instance: {error}",
