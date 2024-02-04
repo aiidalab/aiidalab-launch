@@ -143,10 +143,10 @@ def instance(docker_client, profile):
     def remove_extra_mounts():
         for extra_mount in instance.profile.extra_mounts:
             mount = ExtraMount.parse_mount_string(extra_mount)
-            # TODO: Rmtree on bind mount? Maybe for safety let's just keep them in /tmp
+            # NOTE: We should also remove test bind mounts, but it feels pretty dangerous,
+            # we do not want to accidentaly remove users' home (even though we monkeypatch it).
             if mount["Type"] == "volume":
                 docker_client.volumes.get(mount["Source"]).remove()
-            print(mount)
 
     for op in (
         instance.stop,
@@ -156,7 +156,7 @@ def instance(docker_client, profile):
         try:
             op()
         except (docker.errors.NotFound, RequiresContainerInstance):
-            pass
+            continue
         except (RuntimeError, docker.errors.APIError) as error:
             print(
                 f"WARNING: Issue while stopping/removing instance: {error}",

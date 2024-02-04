@@ -232,7 +232,7 @@ class AiidaLabInstance:
             try:
                 self.client.volumes.get(self.profile.conda_volume_name()).remove()
             except docker.errors.NotFound:  # already removed
-                LOGGER.info(
+                LOGGER.warning(
                     f"Failed to remove conda volume '{self.profile.conda_volume_name()}', likely already removed."
                 )
             except Exception as error:  # unexpected error
@@ -243,9 +243,10 @@ class AiidaLabInstance:
             home_mount_path = PurePosixPath(self.profile.home_mount)
             try:
                 if home_mount_path.is_absolute():
+                    # TODO: Perhaps we should ask user for confirmation here?
                     rmtree(home_mount_path)
                 else:
-                    self.client.volumes.get(str(home_mount_path)).remove()
+                    self.client.volumes.get(self.profile.home_mount).remove()
             except docker.errors.NotFound:
                 pass  # already removed
             except Exception as error:  # unexpected error
