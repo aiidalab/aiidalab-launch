@@ -61,15 +61,18 @@ def _get_aiidalab_default_apps(container: Container) -> list:
     except KeyError:
         return []
 
+
 @dataclass
 class ExtraMount:
     source: str
     target: str
-    mode: str # TOOD: Make this a Literal
+    mode: str  # TOOD: Make this a Literal
     type: str
 
-    @classmethod
-    def from_string(cls, string):
+    # @classmethod
+    # def from_string(cls, string) -> ExtraMount:
+    #    pass
+
 
 @dataclass
 class Profile:
