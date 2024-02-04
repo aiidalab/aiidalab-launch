@@ -41,7 +41,7 @@ jobs:
 
             - name: Run tests
               run: |
-                  pytest -svv --slow --default-image=${{ matrix.default-image }}
+                  pytest -sv --slow --default-image=${{ matrix.default-image }}
                   coverage xml
 
             - name: Upload coverage to Codecov
