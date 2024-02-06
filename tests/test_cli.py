@@ -131,7 +131,7 @@ def test_add_remove_profile():
     result: Result = runner.invoke(cli.cli, ["profile", "list"])
     assert "new-profile" not in result.output
 
-    # Remove new-profile (again – should fail)
+    # Remove new-profile (again - should fail)
     result: Result = runner.invoke(
         cli.cli, ["profile", "remove", "new-profile"], input="y\n"
     )
@@ -251,7 +251,7 @@ class TestInstanceLifecycle:
         assert get_volume(instance.profile.home_mount)
         assert get_volume(instance.profile.conda_volume_name())
 
-        # Start instance again – should be noop.
+        # Start instance again - should be noop.
         caplog.set_level(logging.DEBUG)
         result: Result = runner.invoke(
             cli.cli, ["start", "--no-browser", "--no-pull", "--wait=300"]
