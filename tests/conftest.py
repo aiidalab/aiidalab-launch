@@ -78,7 +78,7 @@ def _pull_docker_image(docker_client):
 # Avoid interfering with used ports on the host system.
 @pytest.fixture(scope="session", autouse=True)
 def _default_port(monkeypatch_session):
-    monkeypatch_session.setattr(aiidalab_launch.profile, "DEFAULT_PORT", None)
+    monkeypatch_session.setattr(aiidalab_launch.profile, "DEFAULT_PORT", 7777)
     yield None
 
 

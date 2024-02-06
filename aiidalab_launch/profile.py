@@ -31,7 +31,9 @@ def _default_port() -> int:  # explicit function required to enable test patchin
     return DEFAULT_PORT
 
 
-DEFAULT_IMAGE = "aiidalab/full-stack:latest"
+DEFAULT_REGISTRY = "docker.io"
+DEFAULT_IMAGE_PATH = "aiidalab/full-stack:latest"
+DEFAULT_IMAGE = f"{DEFAULT_REGISTRY}/{DEFAULT_IMAGE_PATH}"
 
 
 def _valid_volume_name(source: str) -> None:
@@ -158,11 +160,14 @@ class Profile:
 
         system_user = get_docker_env(container, "SYSTEM_USER")
 
-        image_tag = (
-            DEFAULT_IMAGE
-            if DEFAULT_IMAGE in container.image.tags
-            else container.image.tags[0]
-        )
+        if DEFAULT_IMAGE in container.image.tags:
+            image_tag = DEFAULT_IMAGE
+        # Docker seems to strip `docker.io` from the image name
+        # so we add it back manually.
+        elif DEFAULT_IMAGE_PATH in container.image.tags:
+            image_tag = f"{DEFAULT_REGISTRY}/{DEFAULT_IMAGE_PATH}"
+        else:
+            image_tag = container.image.tags[0]
 
         extra_destinations: list[PurePosixPath] = [
             PurePosixPath(mount["Destination"])
