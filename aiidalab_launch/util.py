@@ -172,15 +172,10 @@ def confirm_with_value(value: str, text: str, abort: bool = False) -> bool:
 def get_docker_mount(
     container: docker.models.containers.Container, destination: PurePosixPath
 ) -> docker.types.Mount:
-    try:
-        mount = [
-            mount
-            for mount in container.attrs["Mounts"]
-            if mount["Destination"] == str(destination)
-        ][0]
-    except IndexError:
-        raise ValueError(f"No mount point for {destination}.")
-    return mount
+    for mount in container.attrs["Mounts"]:
+        if mount["Destination"] == str(destination):
+            return mount
+    raise ValueError(f"No mount point for {destination}.")
 
 
 def is_volume_readonly(
