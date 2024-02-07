@@ -106,3 +106,14 @@ push = true
 "aiidalab_launch/version.py" = [
     '__version__ = "{version}"',
 ]
+
+[tool.coverage.run]
+omit = [
+  '*/venv/*',
+  '*/tests/*',
+  '*/docs/*',
+  '*/dist/*',
+]
+
+[tool.coverage.html]
+directory = './htmlcov'
