@@ -68,7 +68,7 @@ LOGGING_LEVELS = {
 pass_app_state = click.make_pass_decorator(ApplicationState, ensure=True)
 
 
-def exception_handler(exception_type, exception, traceback):  # noqa: U100
+def exception_handler(exception_type, exception, _traceback):
     click.echo(f"Unexpected {exception_type.__name__}: {exception}", err=True)
     click.echo(
         "Use verbose mode `aiidalab-launch --verbose` to see full stack trace", err=True
@@ -76,7 +76,7 @@ def exception_handler(exception_type, exception, traceback):  # noqa: U100
 
 
 def with_profile(cmd):
-    def callback(ctx, param, value):  # noqa: U100
+    def callback(ctx, _param, value):
         app_state = ctx.ensure_object(ApplicationState)
         name = value or app_state.config.default_profile
         LOGGER.info(f"Using profile: {name}")
@@ -320,7 +320,7 @@ async def _async_start(
     if not force:
         conflict = False
         with spinner("Check for potential conflicts...", delay=0.1):
-            async for p in _find_mount_point_conflict(
+            async for _p in _find_mount_point_conflict(
                 app_state.docker_client,
                 profile,
                 app_state.config.profiles,
