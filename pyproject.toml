@@ -1,10 +1,57 @@
 [build-system]
-build-backend = "setuptools.build_meta"
-# Version 64.0.0 is needed for editable installs without setup.py file
-# https://setuptools.pypa.io/en/latest/references/keywords.html
-requires = [
-  "setuptools>=64.0.0",
-  "wheel"
+requires = ["flit_core >=3.2,<4"]
+build-backend = "flit_core.buildapi"
+
+[project]
+name = "aiidalab_launch"
+authors = [{name = "Carl Simon Adorf and the AiiDAlab team", email = "aiidalab@materialscloud.org"}]
+readme = "README.md"
+license = {file = "LICENSE"}
+description = "Tool to launch AiiDAlab on a local workstation."
+dynamic = ["version"]
+requires-python = '>=3.8'
+
+classifiers = [
+  'Development Status :: 5 - Production/Stable',
+  'Framework :: AiiDA',
+  'License :: OSI Approved :: MIT License',
+  'Operating System :: POSIX :: Linux',
+  'Operating System :: MacOS :: MacOS X',
+  'Programming Language :: Python :: 3',
+  'Programming Language :: Python :: 3 :: Only',
+  'Programming Language :: Python :: Implementation :: CPython',
+  'Topic :: Scientific/Engineering',
+]
+
+dependencies = [
+  'click==8.1',
+  'click-spinner==0.1.10',
+  'docker==7.0.0',
+  'packaging==21.3',
+  'requests==2.26.0',
+  'requests-cache==0.9.1',
+  'tabulate==0.9.0',
+  'toml==0.10.2',
+]
+
+[project.scripts]
+aiidalab-launch = "aiidalab_launch.__main__:cli"
+
+[project.urls]
+Home = "https://github.com/aiidalab/aiidalab-launch"
+
+[project.optional-dependencies]
+dev = [
+  'bumpver==2023.1129',
+  'dunamai==1.19.0',
+  'pre-commit>=3.5.0',
+]
+
+tests = [
+  'pytest~=7.4.3',
+  'pytest-asyncio~=0.21.1',
+  'pytest-cov~=4.1.0',
+  'responses~=0.23.1',
 ]
 
 [tool]
@@ -46,3 +93,16 @@ select = [
 
 [tool.ruff.lint.per-file-ignores]
 "tests/*" = ["ARG001"]
+
+[tool.bumpver]
+current_version = "v2023.1019"
+version_pattern = "vYYYY.BUILD[PYTAGNUM]"
+commit_message = "Bump version {old_version} -> {new_version}"
+commit = true
+tag = true
+push = true
+
+[tool.bumpver.file_patterns]
+"aiidalab_launch/version.py" = [
+    '__version__ = "{version}"',
+]
