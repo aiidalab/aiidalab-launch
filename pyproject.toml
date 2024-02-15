@@ -56,6 +56,10 @@ tests = [
 
 [tool]
 
+[tool.flit.sdist]
+exclude = ["tests", "aiidalab_launch/.mypy_cache"]
+include = ["*.md", "LICENSE", "logos/*.png"]
+
 [tool.mypy]
 warn_unused_configs = true
 disallow_untyped_calls = true
