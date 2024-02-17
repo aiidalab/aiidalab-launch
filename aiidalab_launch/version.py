@@ -12,4 +12,4 @@ try:
 except RuntimeError:
     __version__ = get_version("aiidalab-launch").serialize()
 except ImportError:
-    __version__ = "v2023.1019"
+    __version__ = "v2024.1020"
