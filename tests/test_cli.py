@@ -7,6 +7,7 @@
 This is the test module for the project's command-line interface (CLI)
 module.
 """
+
 import logging
 from dataclasses import replace
 
