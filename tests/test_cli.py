@@ -262,15 +262,11 @@ class TestInstanceLifecycle:
         assert_status_up()
 
         # Restart instance.
-        # TODO: This test is currently disabled, because it is too flaky.  For
-        # a currently unknown reason, the docker client will not be able to
-        # reach the container anymore to check whether the notebook server is
-        # online.
-        # result: Result = runner.invoke(
-        #     cli.cli, ["start", "--no-browser", "--wait=120", "--restart"]
-        # )
-        # assert result.exit_code == 0
-        # assert_status_up()
+        result: Result = runner.invoke(
+            cli.cli, ["start", "--no-browser", "--no-pull", "--wait=120", "--restart"]
+        )
+        assert result.exit_code == 0
+        assert_status_up()
 
         # Stop (and remove) instance.
         result: Result = runner.invoke(cli.cli, ["stop", "--remove"])
