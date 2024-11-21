@@ -102,9 +102,13 @@ def test_add_remove_profile():
     assert result.exit_code == 0
     assert "Added profile 'new-profile'." in result.output
 
+    # Add second profile to be clean with delete volume
+    runner.invoke(cli.cli, ["profile", "add", "second-profile"], input="n\n")
+
     # Check that new-profile exists
     result: Result = runner.invoke(cli.cli, ["profile", "list"])
     assert "new-profile" in result.output
+    assert "second-profile" in result.output
     result: Result = runner.invoke(cli.cli, ["profile", "show", "new-profile"])
     assert result.exit_code == 0
 
@@ -138,6 +142,15 @@ def test_add_remove_profile():
     )
     assert result.exit_code == 1
     assert "Profile with name 'new-profile' does not exist." in result.output
+
+    # Remove second-profile with reset (`--purge` option)
+    result: Result = runner.invoke(
+        cli.cli,
+        ["profile", "remove", "--purge", "second-profile"],
+        input="y\nsecond-profile\n",
+    )
+    assert result.exit_code == 0
+    assert "Please enter the name of the profile to continue" in result.output
 
 
 def test_add_profile_invalid_name():

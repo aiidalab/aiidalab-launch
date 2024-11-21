@@ -230,34 +230,39 @@ def add_profile(ctx, app_state, port, home_mount, image, profile):
 @click.argument("profile")
 @click.option("--yes", is_flag=True, help="Do not ask for confirmation.")
 @click.option("-f", "--force", is_flag=True, help="Proceed, ignoring any warnings.")
+@click.option("--purge", is_flag=True, help="Remove all data associated with profile.")
 @pass_app_state
-def remove_profile(app_state, profile, yes, force):
+@click.pass_context
+def remove_profile(ctx, app_state, profile, yes, force, purge):
     """Remove an AiiDAlab profile from the configuration."""
     try:
         profile = app_state.config.get_profile(profile)
     except ValueError:
         raise click.ClickException(f"Profile with name '{profile}' does not exist.")
-    else:
-        if not force:
-            instance = AiidaLabInstance(client=app_state.docker_client, profile=profile)
-            status = asyncio.run(instance.status())
-            if status not in (
-                instance.AiidaLabInstanceStatus.DOWN,
-                instance.AiidaLabInstanceStatus.CREATED,
-                instance.AiidaLabInstanceStatus.EXITED,
-            ):
-                raise click.ClickException(
-                    f"The instance associated with profile '{profile.name}' "
-                    "is still running. Use the -f/--force option to remove the "
-                    "profile anyways."
-                )
 
-        if yes or click.confirm(
-            f"Are you sure you want to remove profile '{profile.name}'?"
+    if not force:
+        instance = AiidaLabInstance(client=app_state.docker_client, profile=profile)
+        status = asyncio.run(instance.status())
+        if status not in (
+            instance.AiidaLabInstanceStatus.DOWN,
+            instance.AiidaLabInstanceStatus.CREATED,
+            instance.AiidaLabInstanceStatus.EXITED,
         ):
-            app_state.config.profiles.remove(profile)
-            app_state.save_config()
-            click.echo(f"Removed profile with name '{profile.name}'.")
+            raise click.ClickException(
+                f"The instance associated with profile '{profile.name}' "
+                "is still running. Use the -f/--force option to remove the "
+                "profile anyways."
+            )
+
+    if purge:
+        ctx.invoke(reset, profile=profile, yes=yes)
+
+    if yes or click.confirm(
+        f"Are you sure you want to remove profile '{profile.name}'?"
+    ):
+        app_state.config.profiles.remove(profile)
+        app_state.save_config()
+        click.echo(f"Removed profile with name '{profile.name}'.")
 
 
 @profile.command("edit")
@@ -697,7 +702,7 @@ def reset(app_state, profile, yes):
         )
 
     click.secho(
-        f"Resetting instance for profile '{profile.name}'. This action cannot be undone!",
+        f"Resetting instance for profile '{profile.name}'. This will remove ALL DATA, including the docker container and the associated volumes. This action cannot be undone!",
         err=True,
         fg="red",
     )
