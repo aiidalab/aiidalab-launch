@@ -348,14 +348,17 @@ async def _async_start(
         with spinner(msg):
             instance.pull()
     else:
+        from aiidalab_launch import util
+
         # use local image
         msg = f"Using local image '{profile.image}'."
 
-    if instance.image is None:
-        raise click.ClickException(
-            f"Unable to find image '{profile.image}'. "
-            "Try to use '--pull' to pull the image prior to start."
-        )
+        # check if local image is outdated and pull latest version if so
+        if not util.image_is_latest(instance.client, profile.image):
+            click.secho(
+                "Warning! Local image is outdated, please run with --pull to update.",
+                fg="yellow",
+            )
 
     # Check if the container configuration has changed.
     if instance.container:
