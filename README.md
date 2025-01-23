@@ -6,7 +6,7 @@
 [![codecov](https://codecov.io/gh/aiidalab/aiidalab-launch/branch/main/graph/badge.svg?token=7FOZR20CHS)](https://codecov.io/gh/aiidalab/aiidalab-launch)
 [![Commit Activity](https://img.shields.io/github/commit-activity/m/aiidalab/aiidalab-launch.svg)](https://github.com/aiidalab/aiidalab-launch/pulse)
 
-AiiDAlab Launch makes it easy to run AiiDAlab on your own workstation or laptop.
+AiiDAlab Launch makes it easy to run [AiiDAlab](https://www.aiidalab.net) on your own workstation or laptop.
 
 ## Getting Started
 
@@ -120,12 +120,15 @@ This will:
 Additional notes:
 
   - Use the `--dry` option to preview the release change.
+  - The release should be created directly on the `main` branch,
+    and as such you need special permissions for writing to it.
   - The release tag (e.g. a/b/rc) is determined from the last release.
     Use the `--tag` option to switch the release tag.
 
 ## Authors
 
 * **Carl Simon Adorf (EPFL)** - [@csadorf](https://github.com/csadorf)
+* [AiiDAlab team](https://www.aiidalab.net/about/)
 
 See also the list of [contributors](https://github.com/aiidalab/aiidalab-launch/contributors).
 

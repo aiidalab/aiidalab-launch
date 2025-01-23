@@ -4,6 +4,7 @@
 Authors:
     * Carl Simon Adorf <simon.adorf@epfl.ch>
 """
+
 from dataclasses import dataclass, field
 from pathlib import Path
 
