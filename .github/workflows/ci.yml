@@ -7,6 +7,9 @@ on:
     pull_request:
         branches: [main]
 
+env:
+    FORCE_COLOR: 1
+
 jobs:
 
     test-package:
@@ -17,17 +20,16 @@ jobs:
         strategy:
             fail-fast: false
             matrix:
-                python-version: ['3.8', '3.9', '3.10', '3.11', '3.12']
+                python-version: ['3.8', '3.9', '3.10', '3.11', '3.12', '3.13']
                 default-image:
                     - ''   # use the application default
-                    - aiidalab/aiidalab-docker-stack:latest   # This is the old stack
+                include:
+                    - default-image: aiidalab/aiidalab-docker-stack:latest   # This is the old stack
+                    - python-version: '3.8'
 
         steps:
 
             - uses: actions/checkout@v4
-              with:
-                  fetch-depth: 0
-                  submodules: true
 
             - uses: actions/setup-python@v5
               with:
@@ -45,7 +47,7 @@ jobs:
                   coverage xml
 
             - name: Upload coverage to Codecov
-              uses: codecov/codecov-action@v3
+              uses: codecov/codecov-action@v5
               with:
                   flags: py-${{ matrix.python-version }}
 
@@ -57,7 +59,7 @@ jobs:
         strategy:
             fail-fast: false
             matrix:
-                python-version: ['3.8', '3.9', '3.10', '3.11', '3.12']
+                python-version: ['3.8', '3.9', '3.10', '3.11', '3.12', '3.13']
 
         steps:
 
