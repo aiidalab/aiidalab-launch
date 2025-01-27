@@ -30,9 +30,9 @@ def test_version_displays_library_version():
     """
     runner: CliRunner = CliRunner()
     result: Result = runner.invoke(cli.cli, ["version"])
-    assert (
-        __version__ in result.output.strip()
-    ), "Version number should match library version."
+    assert __version__ in result.output.strip(), (
+        "Version number should match library version."
+    )
 
 
 def test_version_displays_expected_message():
