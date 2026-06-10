@@ -58,6 +58,19 @@ def docker_client():
         pytest.skip("docker not available")
 
 
+@pytest.fixture(scope="function")
+def remove_created_images(docker_client):
+    """Remove all images created by the tests."""
+    images = docker_client.images.list()
+    yield
+    for image in docker_client.images.list():
+        if image not in images:
+            try:
+                image.remove()
+            except docker.errors.APIError:
+                pass
+
+
 @pytest.fixture(autouse=True)
 def _select_default_image(monkeypatch_session, pytestconfig):
     _default_image = pytestconfig.getoption("default_image")

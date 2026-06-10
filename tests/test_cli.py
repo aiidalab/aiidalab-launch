@@ -209,7 +209,7 @@ class TestsAgainstStartedInstance:
 @pytest.mark.slow
 @pytest.mark.trylast
 class TestInstanceLifecycle:
-    def test_start_stop_reset(self, instance, docker_client, caplog):
+    def test_start_stop_reset(self, instance, docker_client, caplog, monkeypatch):
         caplog.set_level(logging.DEBUG)
 
         def get_volume(volume_name):
@@ -260,6 +260,20 @@ class TestInstanceLifecycle:
         assert "Container was already running" in result.output.strip()
         assert result.exit_code == 0
         assert_status_up()
+
+        # test the warning message of image not the latest is not raised
+        assert "Warning!" not in result.output.strip()
+
+        # Then by monkeypatching the image_is_latest function, we can test that
+        # the warning message is raised
+        def image_is_latest(docker_client, image_name):
+            return False
+
+        monkeypatch.setattr("aiidalab_launch.util.image_is_latest", image_is_latest)
+        result: Result = runner.invoke(
+            cli.cli, ["start", "--no-browser", "--no-pull", "--wait=300"]
+        )
+        assert "Warning!" in result.output.strip()
 
         # Restart instance.
         # TODO: This test is currently disabled, because it is too flaky.  For
