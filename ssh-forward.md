@@ -26,4 +26,11 @@ This can be easily achieved by creating an SSH tunnel and forwarding the AiiDAla
    $ ssh user@my-server.org -NfL 8888:localhost:8888
    ```
 
+   If you visit the remote machine through a jump server, you run (replace the J_IP with the jump server IP):
+
+   ```console
+   $ ssh -J {user}@J_IP {user}@{hostname} -NfL {port}:localhost:{port}
+   ```
+
+
 5. Finally, open AiiDAlab in the browser of your local machine via the URL provided earlier, something like: http://localhost:8888/?token=74647d5fe0...
