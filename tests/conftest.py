@@ -27,7 +27,7 @@ import aiidalab_launch
 from aiidalab_launch.application_state import ApplicationState
 from aiidalab_launch.config import Config
 from aiidalab_launch.instance import AiidaLabInstance, RequiresContainerInstance
-from aiidalab_launch.profile import Profile
+from aiidalab_launch.profile import ExtraMount, Profile
 
 
 # Redefine event_loop fixture to be session-scoped.
@@ -143,8 +143,11 @@ def instance(docker_client, profile):
 
     def remove_extra_mounts():
         for extra_mount in instance.profile.extra_mounts:
-            extra_volume, _, _ = instance.profile.parse_extra_mount(extra_mount)
-            docker_client.volumes.get(str(extra_volume)).remove()
+            mount = ExtraMount.parse_mount_string(extra_mount)
+            # NOTE: We should also remove test bind mounts, but it feels pretty dangerous,
+            # we do not want to accidentaly remove users' home (even though we monkeypatch it).
+            if mount["Type"] == "volume":
+                docker_client.volumes.get(mount["Source"]).remove()
 
     for op in (
         instance.stop,

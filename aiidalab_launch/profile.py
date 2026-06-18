@@ -7,6 +7,7 @@ from dataclasses import asdict, dataclass, field
 from pathlib import Path, PurePosixPath
 from urllib.parse import quote_plus
 
+import docker
 import toml
 from docker.models.containers import Container
 
@@ -42,7 +43,7 @@ def _valid_volume_name(source: str) -> None:
     if not Path(source).is_absolute() and not re.fullmatch(
         _REGEX_VALID_IMAGE_NAMES, source
     ):
-        raise ValueError(
+        raise docker.errors.InvalidArgument(
             f"Invalid extra mount volume name '{source}'. Use absolute path for bind mounts."
         )
 
@@ -61,6 +62,43 @@ def _get_aiidalab_default_apps(container: Container) -> list:
         return get_docker_env(container, "AIIDALAB_DEFAULT_APPS").split()
     except KeyError:
         return []
+
+
+# We extend the Mount type from Docker API
+# with some extra validation to fail early if user provides wrong argument.
+# https://github.com/docker/docker-py/blob/bd164f928ab82e798e30db455903578d06ba2070/docker/types/services.py#L305
+class ExtraMount(docker.types.Mount):
+    @classmethod
+    def parse_mount_string(cls, mount_str) -> docker.types.Mount:
+        mount = super().parse_mount_string(mount_str)
+        # For some reason, Docker API allows Source to be None??
+        # Not on our watch!
+        if mount["Source"] is None:
+            raise docker.errors.InvalidArgument(
+                f"Invalid extra mount specification '{mount}'"
+            )
+
+        # If the read-write mode is not "rw", docker assumes "ro"
+        # Let's be more strict here to avoid confusing errors later.
+        parts = mount_str.split(":")
+        if len(parts) == 3:
+            mode = parts[2]
+            if mode not in ("ro", "rw"):
+                raise docker.errors.InvalidArgument(
+                    f"Invalid read-write mode in '{mount}'"
+                )
+
+        # Unlike for home_mount, we will not auto-create missing
+        # directories for extra mounts.
+        if mount["Type"] == "bind":
+            source_path = Path(mount["Source"])
+            if not source_path.exists():
+                raise docker.errors.InvalidArgument(
+                    f"Directory '{source_path}' does not exist!"
+                )
+        else:
+            _valid_volume_name(mount["Source"])
+        return mount
 
 
 @dataclass
@@ -91,44 +129,23 @@ class Profile:
         # Normalize extra mount mode to be "rw" by default
         # so that we match Docker default but are explicit.
         for extra_mount in self.extra_mounts.copy():
-            self.parse_extra_mount(extra_mount)
-            if len(extra_mount.split(":")) == 2:
+            mount = ExtraMount.parse_mount_string(extra_mount)
+            mode = "ro" if mount["ReadOnly"] else "rw"
+            if not extra_mount.endswith(mode):
                 self.extra_mounts.remove(extra_mount)
-                self.extra_mounts.add(f"{extra_mount}:rw")
+                self.extra_mounts.add(f"{extra_mount}:{mode}")
 
         if (
-            self.image.split(":")[0] == "aiidalab/full-stack"
+            self.image.split(":")[0].endswith("aiidalab/full-stack")
             and self.system_user != "jovyan"
         ):
+            # TODO: ERROR out in this case
             LOGGER.warning(
                 "Resetting the system user may create issues for this image!"
             )
 
     def container_name(self) -> str:
         return f"{CONTAINER_PREFIX}{self.name}"
-
-    def parse_extra_mount(
-        self, extra_mount: str
-    ) -> tuple[Path, PurePosixPath, str | None]:
-        fields = extra_mount.split(":")
-        if len(fields) < 2 or len(fields) > 3:
-            raise ValueError(f"Invalid extra mount option '{extra_mount}'")
-
-        source, target = fields[:2]
-        _valid_volume_name(source)
-
-        source_path, target_path = Path(source), PurePosixPath(target)
-        # Unlike for home_mount, we will not auto-create missing
-        # directories for extra mounts.
-        if source_path.is_absolute() and not source_path.exists():
-            raise ValueError(f"Directory '{source}' does not exist")
-
-        # By default, extra mounts are writeable
-        mode = fields[2] if len(fields) == 3 else "rw"
-        if mode not in ("ro", "rw"):
-            raise ValueError(f"Invalid extra mount mode '{mode}'")
-
-        return source_path, target_path, mode
 
     def conda_volume_name(self) -> str:
         return f"{self.container_name()}_conda"
