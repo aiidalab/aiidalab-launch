@@ -4,4 +4,4 @@ import logging
 
 APPLICATION_ID = "org.aiidalab.aiidalab_launch"
 
-LOGGER = logging.getLogger(APPLICATION_ID.split(".")[-1])
+LOGGER = logging.getLogger(APPLICATION_ID.rsplit(".", maxsplit=1)[-1])
