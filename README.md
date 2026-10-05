@@ -56,7 +56,9 @@ and mode is either `rw` for read-write volume (default) or `ro` for read-only vo
 
 As an example, here's how you can mount a quantum chemistry program installed on the host system to make it accessible to AiiDA inside the AiiDAlab container:
 ```python
-extra_mounts = ["/path/to/qcprogram:/opt/qcprogram:ro",]
+extra_mounts = [
+    "/path/to/qcprogram:/opt/qcprogram:ro",
+]
 ```
 
 Finally, AiiDAlab launch will create a dedicated volume for the local conda environment (`~/.conda`).
