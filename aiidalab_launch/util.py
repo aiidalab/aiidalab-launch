@@ -2,11 +2,12 @@ import asyncio
 import logging
 import re
 import webbrowser
+from collections.abc import AsyncGenerator, Generator, Iterable
 from contextlib import contextmanager
 from pathlib import Path, PosixPath, PurePosixPath, WindowsPath
 from textwrap import wrap
 from threading import Event, Thread, Timer
-from typing import Any, AsyncGenerator, Generator, Iterable, Optional, Union
+from typing import Any, Optional, Union
 
 import click
 import click_spinner
