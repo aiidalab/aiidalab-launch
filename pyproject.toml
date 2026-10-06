@@ -3,7 +3,7 @@
 [tool.ruff]
 line-length = 88
 show-fixes = true
-target-version = "py38"
+target-version = "py39"
 
 [tool.ruff.lint]
 # TODO: Fixup all instances of B904 and enable this rule

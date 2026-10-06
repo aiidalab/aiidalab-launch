@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+from collections.abc import AsyncGenerator, Generator
 from contextlib import contextmanager
 from dataclasses import dataclass
 from enum import Enum, auto
@@ -10,7 +11,7 @@ from pathlib import Path, PurePosixPath
 from secrets import token_hex
 from shutil import rmtree
 from time import time
-from typing import Any, AsyncGenerator, Generator
+from typing import Any
 
 import docker
 from docker.models.containers import Container
