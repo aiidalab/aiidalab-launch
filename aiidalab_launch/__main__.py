@@ -217,7 +217,7 @@ def add_profile(ctx, app_state, port, home_mount, image, profile):
             home_mount=home_mount,
         )
     except ValueError as error:  # invalid profile name
-        raise click.ClickException(error)
+        raise click.ClickException(str(error))
 
     app_state.config.profiles.append(new_profile)
     app_state.save_config()
