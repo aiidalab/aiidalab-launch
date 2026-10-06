@@ -31,15 +31,13 @@ jobs:
 
             - uses: actions/checkout@v4
 
-            - uses: actions/setup-python@v5
+            - uses: astral-sh/setup-uv@v10.2.0
               with:
                   python-version: ${{ matrix.python-version }}
+                  activate-environment: true
 
             - name: Install package
-              run: |
-                  which python
-                  python -m pip install -e .[tests]
-                  python -m pip freeze
+              run: uv pip install -e .[tests]
 
             - name: Run tests
               run: |
@@ -51,7 +49,7 @@ jobs:
               with:
                   flags: py-${{ matrix.python-version }}
 
-    test-installation-with-pipx:
+    test-installation-with-uv:
 
         runs-on: ubuntu-latest
         timeout-minutes: 10
@@ -64,19 +62,14 @@ jobs:
         steps:
 
             - uses: actions/checkout@v4
-              with:
-                  fetch-depth: 0
-                  submodules: true
 
-            - uses: actions/setup-python@v5
+            - uses: astral-sh/setup-uv@v10.2.0
               with:
                   python-version: ${{ matrix.python-version }}
+                  activate-environment: true
 
-            - name: Install with pipx
-              run: |
-                  python -m pip install pipx
-                  pipx install ${{ github.workspace }}
+            - name: Install with `uv tool`
+              run: uv tool install ${{ github.workspace }}
 
             - name: Run smoke tests
-              run: |
-                  aiidalab-launch version
+              run: aiidalab-launch version
