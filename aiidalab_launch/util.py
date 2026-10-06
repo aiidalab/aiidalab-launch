@@ -50,9 +50,7 @@ def spinner(
     def spin() -> None:
         # Don't show spinner if verbose output is enabled
         level = logging.getLogger().getEffectiveLevel()
-        show_spinner = (
-            True if level == logging.NOTSET or level >= logging.ERROR else False
-        )
+        show_spinner = bool(level == logging.NOTSET or level >= logging.ERROR)
         if msg:
             newline = not show_spinner
             click.echo(f"{msg.rstrip()} ", nl=newline, err=True)
@@ -133,7 +131,7 @@ def _async_wrap_iter(it: Iterable) -> AsyncGenerator[Any, None]:
                 # This runs outside the event loop thread, so we
                 # must use thread-safe API to talk to the queue.
                 asyncio.run_coroutine_threadsafe(q.put(item), loop).result()
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             exception = e
         finally:
             asyncio.run_coroutine_threadsafe(q.put(_END), loop).result()

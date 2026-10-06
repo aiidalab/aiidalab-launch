@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 """Tool to launch and manage AiiDAlab instances with docker.
 
 Authors:
@@ -60,7 +59,7 @@ MSG_EXTRA_VOLUME = "Extra volume mounted: {source} -> {target} {mode}"
 
 LOGGING_LEVELS = {
     0: logging.ERROR,
-    1: logging.WARN,
+    1: logging.WARNING,
     2: logging.INFO,
     3: logging.DEBUG,
 }  #: a mapping of `verbose` option counts to logging levels
@@ -101,9 +100,7 @@ def with_profile(cmd):
 @pass_app_state
 def cli(app_state, verbose):
     # Use the verbosity count to determine the logging level...
-    logging.basicConfig(
-        level=LOGGING_LEVELS[verbose] if verbose in LOGGING_LEVELS else logging.DEBUG
-    )
+    logging.basicConfig(level=LOGGING_LEVELS.get(verbose, logging.DEBUG))
     if verbose > 0:
         click.secho(
             f"Verbose logging is enabled. "
@@ -140,7 +137,6 @@ def version():
 @cli.group()
 def profile():
     """Manage AiiDAlab profiles."""
-    pass
 
 
 @profile.command("list")
@@ -424,7 +420,7 @@ async def _async_start(
         raise click.ClickException(
             "AiiDAlab instance did not start up within the excepted wait period."
         )
-    except Exception as error:
+    except Exception as error:  # noqa: BLE001
         raise click.ClickException(f"Unknown error occurred: {error}")
     else:
         if wait:
@@ -484,7 +480,7 @@ async def _async_start(
                     fg="green",
                 )
 
-            if not no_browser and webbrowser_available():
+            if not no_browser and webbrowser_available():  # noqa: SIM102
                 if click.confirm(
                     "Do you want to open AiiDAlab in the browser now?", default=True
                 ):

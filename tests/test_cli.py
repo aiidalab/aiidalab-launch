@@ -1,9 +1,4 @@
-#!/usr/bin/env python
-
 """
-.. currentmodule:: test_cli
-.. moduleauthor:: Carl Simon Adorf <simon.adorf@epfl.ch>
-
 This is the test module for the project's command-line interface (CLI)
 module.
 """
