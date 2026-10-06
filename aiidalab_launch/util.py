@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import asyncio
 import logging
 import re
@@ -7,7 +9,7 @@ from contextlib import contextmanager
 from pathlib import Path, PosixPath, PurePosixPath, WindowsPath
 from textwrap import wrap
 from threading import Event, Thread, Timer
-from typing import Any, Optional, Union
+from typing import TYPE_CHECKING, Any
 
 import click
 import click_spinner
@@ -15,6 +17,9 @@ import docker
 import requests
 from packaging.version import Version, parse
 from requests_cache import CachedSession
+
+if TYPE_CHECKING:
+    from packaging.version import LegacyVersion
 
 from .core import LOGGER
 
@@ -38,7 +43,7 @@ SESSION = CachedSession(
 
 @contextmanager
 def spinner(
-    msg: Optional[str] = None, final: Optional[str] = "done.", delay: float = 0
+    msg: str | None = None, final: str | None = "done.", delay: float = 0
 ) -> Generator[None, None, None]:
     """Display spinner only after an optional initial delay."""
 
@@ -53,7 +58,7 @@ def spinner(
             click.echo(f"{msg.rstrip()} ", nl=newline, err=True)
 
         if show_spinner:
-            with click_spinner.spinner():  # type: ignore
+            with click_spinner.spinner():
                 stop.wait()
             click.echo(final if (completed.is_set() and msg) else " ", err=True)
         else:
@@ -137,7 +142,7 @@ def _async_wrap_iter(it: Iterable) -> AsyncGenerator[Any, None]:
     return yield_queue_items()
 
 
-def get_latest_version(timeout: float = 0.1) -> Optional[Version]:
+def get_latest_version(timeout: float = 0.1) -> LegacyVersion | Version | None:
     """Determine the latest released version (on PyPI) of this tool."""
     try:
         req = SESSION.get(
@@ -188,7 +193,7 @@ def is_volume_readonly(
 
 def docker_mount_for(
     container: docker.models.containers.Container, destination: PurePosixPath
-) -> Union[Path, str]:
+) -> Path | str:
     """Identify the Docker mount bind path or volume for a given destination."""
     mount = get_docker_mount(container, destination)
     if mount["Type"] == "bind":
@@ -199,7 +204,7 @@ def docker_mount_for(
             return WindowsPath(
                 f"{drive}:",
                 docker_path.root,
-                docker_path.relative_to(docker_root, drive),
+                docker_path.relative_to(docker_root, drive),  # type: ignore[call-arg,arg-type]
             )
         except ValueError:  # Linux
             return PosixPath(docker_path)

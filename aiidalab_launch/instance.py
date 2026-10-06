@@ -64,8 +64,8 @@ class AiidaLabInstance:
 
     client: docker.DockerClient
     profile: Profile
-    _image: docker.models.images.Image = None
-    _container: Container = None
+    _image: docker.models.images.Image | None = None
+    _container: Container | None = None
     _protocol: str = "http"
 
     def _get_image(self) -> docker.models.images.Image | None:
