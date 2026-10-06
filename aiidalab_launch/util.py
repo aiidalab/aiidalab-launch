@@ -204,7 +204,7 @@ def docker_mount_for(
             return WindowsPath(
                 f"{drive}:",
                 docker_path.root,
-                docker_path.relative_to(docker_root, drive),
+                docker_path.relative_to(docker_root, drive),  # type: ignore[call-arg,arg-type]
             )
         except ValueError:  # Linux
             return PosixPath(docker_path)
