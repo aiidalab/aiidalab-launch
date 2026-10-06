@@ -60,7 +60,7 @@ MSG_EXTRA_VOLUME = "Extra volume mounted: {source} -> {target} {mode}"
 
 LOGGING_LEVELS = {
     0: logging.ERROR,
-    1: logging.WARN,
+    1: logging.WARNING,
     2: logging.INFO,
     3: logging.DEBUG,
 }  #: a mapping of `verbose` option counts to logging levels
@@ -140,7 +140,6 @@ def version():
 @cli.group()
 def profile():
     """Manage AiiDAlab profiles."""
-    pass
 
 
 @profile.command("list")
