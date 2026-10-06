@@ -1,12 +1,3 @@
-#!/usr/bin/env python
-
-"""
-.. currentmodule:: conftest
-.. moduleauthor:: Carl Simon Adorf <simon.adorf@epfl.ch>
-
-Provide fixtures for all tests.
-"""
-
 import asyncio
 import random
 import re
@@ -197,10 +188,10 @@ def _enable_docker_requests(_mocked_responses):
 @pytest.fixture
 def _pypi_response():
     "A minimal, but valid PyPI response for this package."
-    return dict(
-        url="https://pypi.python.org/pypi/aiidalab-launch/json",
-        json={"releases": {"2022.1010": [{"yanked": False}]}},
-    )
+    return {
+        "url": "https://pypi.python.org/pypi/aiidalab-launch/json",
+        "json": {"releases": {"2022.1010": [{"yanked": False}]}},
+    }
 
 
 # Do not request package information from PyPI
@@ -217,9 +208,10 @@ def mock_pypi_request(monkeypatch, _mocked_responses, _pypi_response):
 def mock_pypi_request_timeout(_mocked_responses, _pypi_response):
     "Simulate a timeout while trying to reach the PyPI server."
     # Setup the timeout response.
-    timeout_response = dict(
-        url=_pypi_response["url"], body=requests.exceptions.Timeout()
-    )
+    timeout_response = {
+        "url": _pypi_response["url"],
+        "body": requests.exceptions.Timeout(),
+    }
     _mocked_responses.upsert(responses.GET, **timeout_response)
     yield
     # Restore the valid mocked response for PyPI.

@@ -120,7 +120,7 @@ class AiidaLabInstance:
         return docker.types.Mount(
             target=str(target_path),
             source=str(source_path),
-            read_only=True if mode == "ro" else False,
+            read_only=(mode == "ro"),
             type="bind" if source_path.is_absolute() else "volume",
         )
 
@@ -241,7 +241,7 @@ class AiidaLabInstance:
                 LOGGER.debug(
                     f"Failed to remove conda volume '{self.profile.conda_volume_name()}', likely already removed."
                 )
-            except Exception as error:  # unexpected error
+            except Exception as error:  # noqa: BLE001
                 raise RuntimeError(f"Failed to remove conda volume: {error}")
 
         if data and self.profile.home_mount:
@@ -254,7 +254,7 @@ class AiidaLabInstance:
                     self.client.volumes.get(str(home_mount_path)).remove()
             except docker.errors.NotFound:
                 pass  # already removed
-            except Exception as error:  # unexpected error
+            except Exception as error:  # unexpected error  # noqa: BLE001
                 raise RuntimeError(f"Failed to remove home volume: {error}")
 
     def logs(
