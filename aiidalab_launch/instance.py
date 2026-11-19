@@ -17,7 +17,7 @@ import docker
 from docker.models.containers import Container
 
 from .core import LOGGER
-from .profile import Profile
+from .profile import ExtraMount, Profile
 from .util import _async_wrap_iter, docker_mount_for, get_docker_env
 
 
@@ -104,6 +104,7 @@ class AiidaLabInstance:
         return docker.types.Mount(
             target=f"/home/{self.profile.system_user}/.conda",
             source=self.profile.conda_volume_name(),
+            type="volume",
         )
 
     def _home_mount(self) -> docker.types.Mount:
@@ -116,13 +117,7 @@ class AiidaLabInstance:
         )
 
     def _extra_mount(self, extra_mount: str) -> docker.types.Mount:
-        source_path, target_path, mode = self.profile.parse_extra_mount(extra_mount)
-        return docker.types.Mount(
-            target=str(target_path),
-            source=str(source_path),
-            read_only=(mode == "ro"),
-            type="bind" if source_path.is_absolute() else "volume",
-        )
+        return ExtraMount.parse_mount_string(extra_mount)
 
     def _mounts(self) -> Generator[docker.types.Mount, None, None]:
         yield self._conda_mount()
@@ -249,9 +244,10 @@ class AiidaLabInstance:
             home_mount_path = PurePosixPath(self.profile.home_mount)
             try:
                 if home_mount_path.is_absolute():
+                    # TODO: Perhaps we should ask user for confirmation here?
                     rmtree(home_mount_path)
                 else:
-                    self.client.volumes.get(str(home_mount_path)).remove()
+                    self.client.volumes.get(self.profile.home_mount).remove()
             except docker.errors.NotFound:
                 pass  # already removed
             except Exception as error:  # unexpected error  # noqa: BLE001
