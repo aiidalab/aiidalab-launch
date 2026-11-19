@@ -126,12 +126,12 @@ class Profile:
 
         _valid_volume_name(self.home_mount)
 
-        # Normalize extra mount mode to be "rw" by default
-        # so that we match Docker default but are explicit.
+        # Normalize the extra mount mode to be "rw" by default
+        # so that we match Docker default while being explicit.
         for extra_mount in self.extra_mounts.copy():
             mount = ExtraMount.parse_mount_string(extra_mount)
-            mode = "ro" if mount["ReadOnly"] else "rw"
-            if not extra_mount.endswith(mode):
+            if len(extra_mount.split(":")) == 2:
+                mode = "ro" if mount["ReadOnly"] else "rw"
                 self.extra_mounts.remove(extra_mount)
                 self.extra_mounts.add(f"{extra_mount}:{mode}")
 
