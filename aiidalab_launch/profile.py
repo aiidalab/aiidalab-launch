@@ -136,7 +136,7 @@ class Profile:
                 self.extra_mounts.add(f"{extra_mount}:{mode}")
 
         if (
-            self.image.split(":")[0].endswith("aiidalab/full-stack")
+            self.image.split(":")[0] == "aiidalab/full-stack"
             and self.system_user != "jovyan"
         ):
             # TODO: ERROR out in this case

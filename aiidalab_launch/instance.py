@@ -233,7 +233,7 @@ class AiidaLabInstance:
             try:
                 self.client.volumes.get(self.profile.conda_volume_name()).remove()
             except docker.errors.NotFound:  # already removed
-                LOGGER.warning(
+                LOGGER.debug(
                     f"Failed to remove conda volume '{self.profile.conda_volume_name()}', likely already removed."
                 )
             except Exception as error:  # noqa: BLE001
