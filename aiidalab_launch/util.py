@@ -136,7 +136,11 @@ def _async_wrap_iter(it: Iterable) -> AsyncGenerator[Any, None]:
 
             try:
                 future.result()
-            except (RuntimeError, asyncio.CancelledError, concurrent.futures.CancelledError):
+            except (
+                RuntimeError,
+                asyncio.CancelledError,
+                concurrent.futures.CancelledError,
+            ):
                 return False
 
             return True

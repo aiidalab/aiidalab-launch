@@ -20,8 +20,13 @@ def test_get_latest_version_timeout(mock_pypi_request_timeout):
 
 def test_async_wrap_iter_no_queue_put_warning_on_loop_close():
     result = subprocess.run(
-        [sys.executable, "-W", "always", "-c", dedent(
-            """
+        [
+            sys.executable,
+            "-W",
+            "always",
+            "-c",
+            dedent(
+                """
             import asyncio
             import time
 
@@ -45,7 +50,8 @@ def test_async_wrap_iter_no_queue_put_warning_on_loop_close():
             loop.close()
             time.sleep(0.2)
             """
-        )],
+            ),
+        ],
         check=False,
         capture_output=True,
         text=True,
