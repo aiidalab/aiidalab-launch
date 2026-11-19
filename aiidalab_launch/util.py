@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import concurrent.futures
 import logging
 import re
 import webbrowser
@@ -125,18 +126,34 @@ def _async_wrap_iter(it: Iterable) -> AsyncGenerator[Any, None]:
             raise exception
 
     def iter_to_queue() -> None:
+        def put_in_queue(item: Any) -> bool:
+            coro = q.put(item)
+            try:
+                future = asyncio.run_coroutine_threadsafe(coro, loop)
+            except RuntimeError:
+                coro.close()
+                return False
+
+            try:
+                future.result()
+            except (RuntimeError, asyncio.CancelledError, concurrent.futures.CancelledError):
+                return False
+
+            return True
+
         nonlocal exception
         try:
             for item in it:
                 # This runs outside the event loop thread, so we
                 # must use thread-safe API to talk to the queue.
-                asyncio.run_coroutine_threadsafe(q.put(item), loop).result()
+                if not put_in_queue(item):
+                    return
         except Exception as e:  # noqa: BLE001
             exception = e
         finally:
-            asyncio.run_coroutine_threadsafe(q.put(_END), loop).result()
+            put_in_queue(_END)
 
-    Thread(target=iter_to_queue).start()
+    Thread(target=iter_to_queue, daemon=True).start()
     return yield_queue_items()
 
 
