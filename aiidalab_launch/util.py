@@ -136,7 +136,7 @@ def _async_wrap_iter(it: Iterable) -> AsyncGenerator[Any, None]:
         finally:
             asyncio.run_coroutine_threadsafe(q.put(_END), loop).result()
 
-    Thread(target=iter_to_queue).start()
+    Thread(target=iter_to_queue, daemon=True).start()
     return yield_queue_items()
 
 
