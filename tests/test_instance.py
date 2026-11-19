@@ -1,10 +1,3 @@
-#!/usr/bin/env python
-
-"""
-.. currentmodule:: test_core
-.. moduleauthor:: Carl Simon Adorf <simon.adorf@epfl.ch>
-"""
-
 import re
 from copy import deepcopy
 from dataclasses import replace

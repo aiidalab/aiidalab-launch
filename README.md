@@ -55,7 +55,7 @@ Additional volumes to be mounted to the the AiiDAlab container can be specified 
 and mode is either `rw` for read-write volume (default) or `ro` for read-only volume.
 
 As an example, here's how you can mount a quantum chemistry program installed on the host system to make it accessible to AiiDA inside the AiiDAlab container:
-```python
+```
 extra_mounts = ["/path/to/qcprogram:/opt/qcprogram:ro",]
 ```
 
@@ -137,8 +137,10 @@ See also the list of [contributors](https://github.com/aiidalab/aiidalab-launch/
 
 Users of AiiDAlab are kindly asked to cite the following publication in their own work:
 
-A. V. Yakutovich et al., Comp. Mat. Sci. 188, 110165 (2021).
-[DOI:10.1016/j.commatsci.2020.110165](https://doi.org/10.1016/j.commatsci.2020.110165)
+- A. V. Yakutovich, D. Hollas, E. Bainglass, J. Yu et al., Digit. Discov. 5, 2310-2324 (2026).
+  [DOI:10.1039/D5DD00567A](https://doi.org/10.1039/D5DD00567A)
+- A. V. Yakutovich, K. Eimre, O. Schütt et al., Comp. Mat. Sci. 188, 110165 (2021).
+  [DOI:10.1016/j.commatsci.2020.110165](https://doi.org/10.1016/j.commatsci.2020.110165)
 
 ## Contact
 

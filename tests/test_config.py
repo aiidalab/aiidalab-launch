@@ -28,7 +28,7 @@ def test_config_init(config):
 
 
 def test_config_equality(config):
-    assert config == config
+    assert config == config  # noqa: PLR0124
     assert config != replace(config, default_profile="other")
 
 

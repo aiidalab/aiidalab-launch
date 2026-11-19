@@ -29,7 +29,7 @@ class Config:
         loaded_config = toml.loads(blob)
         config = deepcopy(loaded_config)
         config["profiles"] = []
-        for name, profile in loaded_config.pop("profiles", dict()).items():
+        for name, profile in loaded_config.pop("profiles", {}).items():
             extra_mounts = (
                 set(profile.pop("extra_mounts")) if "extra_mounts" in profile else set()
             )

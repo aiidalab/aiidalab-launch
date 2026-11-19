@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 """Tool to launch and manage AiiDAlab instances with docker.
 
 Authors:

@@ -1,9 +1,4 @@
-#!/usr/bin/env python
-
 """
-.. currentmodule:: test_cli
-.. moduleauthor:: Carl Simon Adorf <simon.adorf@epfl.ch>
-
 This is the test module for the project's command-line interface (CLI)
 module.
 """
@@ -30,9 +25,9 @@ def test_version_displays_library_version():
     """
     runner: CliRunner = CliRunner()
     result: Result = runner.invoke(cli.cli, ["version"])
-    assert (
-        __version__ in result.output.strip()
-    ), "Version number should match library version."
+    assert __version__ in result.output.strip(), (
+        "Version number should match library version."
+    )
 
 
 def test_version_displays_expected_message():
