@@ -75,7 +75,7 @@ def test_profile_init_invalid_extra_mounts(profile, extra_volume_name, extra_mou
 
 
 def test_profile_equality(profile):
-    assert profile == profile
+    assert profile == profile  # noqa: PLR0124
     assert profile != replace(profile, name="other")
 
 

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+from collections.abc import AsyncGenerator, Generator
 from contextlib import contextmanager
 from dataclasses import dataclass
 from enum import Enum, auto
@@ -10,7 +11,7 @@ from pathlib import Path, PurePosixPath
 from secrets import token_hex
 from shutil import rmtree
 from time import time
-from typing import Any, AsyncGenerator, Generator
+from typing import Any
 
 import docker
 from docker.models.containers import Container
@@ -63,8 +64,8 @@ class AiidaLabInstance:
 
     client: docker.DockerClient
     profile: Profile
-    _image: docker.models.images.Image = None
-    _container: Container = None
+    _image: docker.models.images.Image | None = None
+    _container: Container | None = None
     _protocol: str = "http"
 
     def _get_image(self) -> docker.models.images.Image | None:
@@ -119,7 +120,7 @@ class AiidaLabInstance:
         return docker.types.Mount(
             target=str(target_path),
             source=str(source_path),
-            read_only=True if mode == "ro" else False,
+            read_only=(mode == "ro"),
             type="bind" if source_path.is_absolute() else "volume",
         )
 
@@ -240,7 +241,7 @@ class AiidaLabInstance:
                 LOGGER.debug(
                     f"Failed to remove conda volume '{self.profile.conda_volume_name()}', likely already removed."
                 )
-            except Exception as error:  # unexpected error
+            except Exception as error:  # noqa: BLE001
                 raise RuntimeError(f"Failed to remove conda volume: {error}")
 
         if data and self.profile.home_mount:
@@ -253,7 +254,7 @@ class AiidaLabInstance:
                     self.client.volumes.get(str(home_mount_path)).remove()
             except docker.errors.NotFound:
                 pass  # already removed
-            except Exception as error:  # unexpected error
+            except Exception as error:  # unexpected error  # noqa: BLE001
                 raise RuntimeError(f"Failed to remove home volume: {error}")
 
     def logs(

@@ -1,9 +1,9 @@
-#!/usr/bin/env python
 """Tool to launch and manage AiiDAlab instances with docker.
 
 Authors:
     * Carl Simon Adorf <simon.adorf@epfl.ch>
 """
+
 from dataclasses import dataclass, field
 from pathlib import Path
 

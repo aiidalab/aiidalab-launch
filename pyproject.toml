@@ -9,12 +9,11 @@ readme = "README.md"
 license = {file = "LICENSE"}
 description = "Tool to launch AiiDAlab on a local workstation."
 dynamic = ["version"]
-requires-python = '>=3.8'
+requires-python = '>=3.9'
 
 classifiers = [
   'Development Status :: 5 - Production/Stable',
   'Framework :: AiiDA',
-  'License :: OSI Approved :: MIT License',
   'Operating System :: POSIX :: Linux',
   'Operating System :: MacOS :: MacOS X',
   'Programming Language :: Python :: 3',
@@ -42,7 +41,7 @@ Home = "https://github.com/aiidalab/aiidalab-launch"
 
 [project.optional-dependencies]
 dev = [
-  'bumpver==2023.1129',
+  'bumpver>=2023.1129',
   'dunamai==1.19.0',
   'pre-commit>=3.5.0',
 ]
@@ -53,8 +52,6 @@ tests = [
   'pytest-cov~=4.1.0',
   'responses~=0.23.1',
 ]
-
-[tool]
 
 [tool.mypy]
 warn_unused_configs = true
@@ -73,26 +70,6 @@ filterwarnings = ["ignore::DeprecationWarning:docker.*:"]
 [tool.ruff]
 line-length = 88
 show-fixes = true
-target-version = "py38"
-
-[tool.ruff.lint]
-# TODO: Fixup all instances of B904 and enable this rule
-ignore = ["E501", "B904"]
-select = [
-  "ARG",  # flake8-unused-arguments
-  "B",  # flake8-bugbear
-  "E",  # pycodestyle
-  "F",  # pyflake
-  "I",  # isort
-  "PLE",  # pylint error rules
-  "PLW",  # pylint warning rules
-  "PLC",  # pylint convention rules
-  "RUF",  # ruff-specific rules
-  "UP"  # pyupgrade
-]
-
-[tool.ruff.lint.per-file-ignores]
-"tests/*" = ["ARG001"]
 
 [tool.bumpver]
 current_version = "v2023.1019"

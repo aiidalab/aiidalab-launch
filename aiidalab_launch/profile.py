@@ -67,7 +67,7 @@ def _get_aiidalab_default_apps(container: Container) -> list:
 class Profile:
     name: str = MAIN_PROFILE_NAME
     port: int | None = field(default_factory=_default_port)
-    default_apps: list[str] = field(default_factory=lambda: [])
+    default_apps: list[str] = field(default_factory=list)
     system_user: str = "jovyan"
     image: str = DEFAULT_IMAGE
     home_mount: str | None = None
