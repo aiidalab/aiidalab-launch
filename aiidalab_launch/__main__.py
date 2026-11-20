@@ -120,9 +120,18 @@ def cli(app_state, verbose):
         click.secho(
             f"A new version of aiidalab-launch is available: {latest_version} (installed: {__version__})",
             fg="yellow",
+            err=True,
         )
         if "pipx" in __file__:
-            click.secho("Run `pipx upgrade aiidalab-launch` to update.", fg="yellow")
+            click.secho(
+                "Run `pipx upgrade aiidalab-launch` to update.", fg="yellow", err=True
+            )
+        elif "uv/tools" in __file__:
+            click.secho(
+                "Run `uv tool upgrade aiidalab-launch` to update.",
+                fg="yellow",
+                err=True,
+            )
 
     # Apply migrations
     app_state.apply_migrations()
