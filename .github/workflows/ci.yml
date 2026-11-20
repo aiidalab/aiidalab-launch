@@ -33,13 +33,10 @@ jobs:
                   python-version: ${{ matrix.python-version }}
                   activate-environment: true
 
-            - name: Install package
-              run: uv pip install -e .[tests]
-
             - name: Run tests
               run: |
-                  pytest -sv --slow --default-image=${{ matrix.default-image }}
-                  coverage xml
+                  uv run pytest -sv --slow --default-image=${{ matrix.default-image }}
+                  uv run coverage xml
 
             - name: Upload coverage to Codecov
               uses: codecov/codecov-action@v5
