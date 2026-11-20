@@ -5,6 +5,9 @@ This module contains project version information.
 .. moduleauthor:: Carl Simon Adorf <simon.adorf@epfl.ch>
 """
 
+__version__ = "v2024.1020"
+
+# Development version
 try:
     from dunamai import Version, get_version
 
@@ -12,4 +15,4 @@ try:
 except RuntimeError:
     __version__ = get_version("aiidalab-launch").serialize()
 except ImportError:
-    __version__ = "v2024.1020"
+    pass

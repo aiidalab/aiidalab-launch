@@ -53,7 +53,7 @@ dev = [
 ]
 
 [tool.hatch.version]
-path = "home/__init__.py"
+path = "aiidalab_launch/version.py"
 
 [tool.hatch.build.targets.wheel]
 packages = ["aiidalab_launch"]
