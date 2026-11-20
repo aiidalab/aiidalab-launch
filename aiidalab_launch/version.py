@@ -6,13 +6,3 @@ This module contains project version information.
 """
 
 __version__ = "v2024.1020"
-
-# Development version
-try:
-    from dunamai import Version, get_version
-
-    __version__ = Version.from_git().serialize()
-except RuntimeError:
-    __version__ = get_version("aiidalab-launch").serialize()
-except ImportError:
-    pass
