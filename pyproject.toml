@@ -10,7 +10,7 @@ dynamic = ["version"]
 requires-python = '>=3.9'
 readme = "README.md"
 license = "MIT"
-license-files = ["LICENSE.txt"]
+license-files = ["LICENSE"]
 
 classifiers = [
   'Development Status :: 5 - Production/Stable',
@@ -76,7 +76,7 @@ line-length = 88
 show-fixes = true
 
 [tool.bumpver]
-current_version = "v2023.1019"
+current_version = "v2024.1020"
 version_pattern = "vYYYY.BUILD[PYTAGNUM]"
 commit_message = "Bump version {old_version} -> {new_version}"
 commit = true

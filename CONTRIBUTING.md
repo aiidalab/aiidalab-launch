@@ -24,7 +24,7 @@ We use this for example for the [instance lifecycle tests](https://github.com/ai
 First, make sure to install the test dependencies, e.g., by executing the following command from within the repository root directory:
 
 ```console
-$ pip install -e '.[tests]'
+$ pip install -e . --group dev
 ```
 
 Next, run tests by simply executing `$ pytest`.

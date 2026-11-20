@@ -85,7 +85,7 @@ export DOCKER_HOST=unix:///run/user/$UID/podman/podman.sock
 
 ### Setting up a development environment
 
-To develop this package, first clone it and then install the development dependencies with `pip install -e . --group dev`.
+To develop this package, first clone it and then install the development dependencies with `pip install -e . --group dev` (requires pip >= 25.1; alternatively, use `uv sync`).
 We recommend to install the [pre-commit](https://pre-commit.com/) hooks to avoid unnecessary iterations when pushing new changes.
 To install the pre-commit hooks, switch into the repository root directly and execute:
 ```console
@@ -94,7 +94,7 @@ pre-commit install
 
 ### Run automated tests
 
-To run the automated tests suite, clone the repository, install test dependencies with `pip install -e '.[tests]'`, and then execute tests with
+To run the automated tests suite, clone the repository, install test dependencies with `pip install -e . --group dev` (or `uv sync`), and then execute tests with
 
 ```console
 pytest
