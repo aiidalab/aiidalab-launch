@@ -45,8 +45,7 @@ def monkeypatch_session():
 def docker_client():
     try:
         yield docker.from_env()
-    except docker.errors.DockerException as e:
-        print(e)
+    except docker.errors.DockerException:
         pytest.skip("docker not available")
 
 
