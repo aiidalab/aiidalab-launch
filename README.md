@@ -85,7 +85,7 @@ export DOCKER_HOST=unix:///run/user/$UID/podman/podman.sock
 
 ### Setting up a development environment
 
-To develop this package, first clone it and then install the development dependencies with `pip install -e '.[dev]'`.
+To develop this package, first clone it and then install the development dependencies with `pip install -e . --group dev`.
 We recommend to install the [pre-commit](https://pre-commit.com/) hooks to avoid unnecessary iterations when pushing new changes.
 To install the pre-commit hooks, switch into the repository root directly and execute:
 ```console
@@ -111,7 +111,7 @@ Note: On Mac OS-X you may have to override the standard temporary base directory
 
 ### Creating a new release
 
-To create a new release, clone the repository, install development dependencies with `pip install -e '.[dev]'`, and then execute `bumpver update`.
+To create a new release, clone the repository, install development dependencies with `pip install -e . --group dev`, and then execute `bumpver update`.
 This will:
 
   1. Create a tagged release with bumped version and push it to the repository.

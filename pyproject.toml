@@ -1,6 +1,7 @@
 [build-system]
 requires = ["hatchling>=1.27"]
 build-backend = "hatchling.build"
+
 [project]
 name = "aiidalab_launch"
 description = "Tool to launch AiiDAlab on a local workstation."
@@ -40,18 +41,15 @@ aiidalab-launch = "aiidalab_launch.__main__:cli"
 Home = "https://github.com/aiidalab/aiidalab-launch"
 Issues = "https://github.com/aiidalab/aiidalab-home/issues"
 
-[project.optional-dependencies]
+[dependency-groups]
 dev = [
-  'bumpver>=2023.1129',
-  'dunamai==1.19.0',
-  'pre-commit>=3.5.0',
-]
-
-tests = [
   'pytest~=7.4.3',
   'pytest-asyncio~=0.21.1',
   'pytest-cov~=4.1.0',
   'responses~=0.23.1',
+  'bumpver>=2023.1129',
+  'dunamai==1.19.0',
+  'pre-commit>=3.5.0',
 ]
 
 [tool.hatch.version]
