@@ -13,7 +13,9 @@ from shutil import rmtree
 from time import time
 from typing import Any
 
-import docker
+import docker.errors
+import docker.models.images
+import docker.types
 from docker.models.containers import Container
 
 from .core import LOGGER
@@ -260,7 +262,7 @@ class AiidaLabInstance:
 
     def logs(
         self, stream: bool = False, follow: bool = False
-    ) -> docker.types.daemon.CancellableStream | str:
+    ) -> docker.types.daemon.CancellableStream[bytes] | bytes:
         if self.container is None:
             raise RuntimeError("Instance was not created.")
         return self.container.logs(stream=stream, follow=follow)  # type: ignore[call-overload]
