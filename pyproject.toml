@@ -4,12 +4,13 @@ build-backend = "flit_core.buildapi"
 
 [project]
 name = "aiidalab_launch"
-authors = [{name = "Carl Simon Adorf and the AiiDAlab team", email = "aiidalab@materialscloud.org"}]
-readme = "README.md"
-license = {file = "LICENSE"}
 description = "Tool to launch AiiDAlab on a local workstation."
+authors = [{name = "Carl Simon Adorf and the AiiDAlab team", email = "aiidalab@materialscloud.org"}]
 dynamic = ["version"]
 requires-python = '>=3.9'
+readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE.txt"]
 
 classifiers = [
   'Development Status :: 5 - Production/Stable',
@@ -38,6 +39,7 @@ aiidalab-launch = "aiidalab_launch.__main__:cli"
 
 [project.urls]
 Home = "https://github.com/aiidalab/aiidalab-launch"
+Issues = "https://github.com/aiidalab/aiidalab-home/issues"
 
 [project.optional-dependencies]
 dev = [
