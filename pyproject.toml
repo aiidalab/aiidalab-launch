@@ -1,7 +1,6 @@
 [build-system]
-requires = ["flit_core >=3.2,<4"]
-build-backend = "flit_core.buildapi"
-
+requires = ["hatchling>=1.27"]
+build-backend = "hatchling.build"
 [project]
 name = "aiidalab_launch"
 description = "Tool to launch AiiDAlab on a local workstation."
@@ -54,6 +53,12 @@ tests = [
   'pytest-cov~=4.1.0',
   'responses~=0.23.1',
 ]
+
+[tool.hatch.version]
+path = "home/__init__.py"
+
+[tool.hatch.build.targets.wheel]
+packages = ["aiidalab_launch"]
 
 [tool.mypy]
 warn_unused_configs = true
