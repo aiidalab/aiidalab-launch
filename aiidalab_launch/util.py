@@ -14,6 +14,7 @@ from typing import Any
 import click
 import click_spinner
 import docker
+import docker.models
 import requests
 from packaging.version import Version, parse
 from requests_cache import CachedSession
