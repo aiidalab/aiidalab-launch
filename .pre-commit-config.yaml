@@ -1,6 +1,7 @@
 ---
 ci:
     autoupdate_schedule: quarterly
+    skip: [mypy]
 
 repos:
 
@@ -24,12 +25,17 @@ repos:
           - id: ruff-check
             args: [--fix, --exit-non-zero-on-fix, --show-fixes]
 
-    - repo: https://github.com/pre-commit/mirrors-mypy
-      rev: v2.4.0
+    - repo: local
       hooks:
           - id: mypy
-            additional_dependencies:
-                - types-click-spinner
-                - types-requests
-                - types-tabulate
-                - types-toml
+            name: mypy
+            entry: mypy
+            args: [--pretty, --config-file=pyproject.toml, aiidalab_launch/]
+            language: system
+            types: [python]
+            require_serial: true
+            pass_filenames: false
+            exclude: >-
+                (?x)^(
+                  tests/.*|
+                )$

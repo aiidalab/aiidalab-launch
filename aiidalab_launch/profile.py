@@ -152,6 +152,8 @@ class Profile:
 
     @classmethod
     def from_container(cls, container: Container) -> Profile:
+        assert container.name is not None
+        assert container.image is not None
         profile_name = re.sub(re.escape(CONTAINER_PREFIX), "", container.name)
         if not profile_name:
             raise RuntimeError(
