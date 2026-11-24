@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import concurrent.futures
 import logging
 import re
 import webbrowser
@@ -114,29 +115,77 @@ def _async_wrap_iter(it: Iterable) -> AsyncGenerator[Any, None]:
     exception = None
     _END = object()
 
+    stop = Event()
+
     async def yield_queue_items() -> AsyncGenerator[Any, None]:
-        while True:
-            next_item = await q.get()
-            if next_item is _END:
-                break
-            yield next_item
+        try:
+            while True:
+                next_item = await q.get()
+                if next_item is _END:
+                    break
+                yield next_item
+        finally:
+            # Consumer is done (exhausted, closed early, or cancelled): tell
+            # the producer to stop, and free a slot so a pending put can finish.
+            stop.set()
+            while not q.empty():
+                q.get_nowait()
         if exception is not None:
             # the iterator has raised, propagate the exception
             raise exception
 
     def iter_to_queue() -> None:
+        def put_in_queue(item: Any) -> bool:
+            """Put item on the queue; return False if the consumer is gone."""
+            if stop.is_set() or loop.is_closed():
+                return False
+            coro = q.put(item)
+            try:
+                future = asyncio.run_coroutine_threadsafe(coro, loop)
+            except RuntimeError:
+                # Loop was closed in the meantime
+                coro.close()
+                return False
+
+            # Poll instead of blocking forever, so we notice when the
+            # consumer stops or the loop is closed with the put still pending.
+            while True:
+                try:
+                    future.result(timeout=0.1)
+                except concurrent.futures.TimeoutError:
+                    if stop.is_set() or loop.is_closed():
+                        future.cancel()
+                        return False
+                except (
+                    RuntimeError,
+                    asyncio.CancelledError,
+                    concurrent.futures.CancelledError,
+                ):
+                    return False
+                else:
+                    return True
+
         nonlocal exception
         try:
             for item in it:
                 # This runs outside the event loop thread, so we
                 # must use thread-safe API to talk to the queue.
-                asyncio.run_coroutine_threadsafe(q.put(item), loop).result()
+                if not put_in_queue(item):
+                    return
         except Exception as e:  # noqa: BLE001
             exception = e
         finally:
-            asyncio.run_coroutine_threadsafe(q.put(_END), loop).result()
+            # Nothing to signal if the consumer is already gone.
+            if not stop.is_set():
+                put_in_queue(_END)
+            close = getattr(it, "close", None)
+            if callable(close):
+                try:
+                    close()
+                except Exception:  # noqa: BLE001
+                    LOGGER.debug("Error while closing wrapped iterator.", exc_info=True)
 
-    Thread(target=iter_to_queue).start()
+    Thread(target=iter_to_queue, daemon=True).start()
     return yield_queue_items()
 
 
