@@ -57,6 +57,7 @@ path = "aiidalab_launch/version.py"
 [tool.hatch.build.targets.wheel]
 packages = ["aiidalab_launch"]
 
+
 [tool.mypy]
 warn_unused_configs = true
 disallow_untyped_calls = true
@@ -64,6 +65,7 @@ disallow_untyped_calls = true
 [[tool.mypy.overrides]]
 module = "docker.*"
 ignore_missing_imports = true
+
 
 [tool.pytest.ini_options]
 addopts = ["--cov=aiidalab_launch", "--cov-fail-under=80"]
