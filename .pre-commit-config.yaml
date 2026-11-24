@@ -30,6 +30,5 @@ repos:
           - id: mypy
             additional_dependencies:
                 - types-click-spinner
-                - types-requests
                 - types-tabulate
                 - types-toml
