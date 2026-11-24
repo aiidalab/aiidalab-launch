@@ -9,7 +9,7 @@ from contextlib import contextmanager
 from pathlib import Path, PosixPath, PurePosixPath, WindowsPath
 from textwrap import wrap
 from threading import Event, Thread, Timer
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 import click
 import click_spinner
@@ -17,9 +17,6 @@ import docker
 import requests
 from packaging.version import Version, parse
 from requests_cache import CachedSession
-
-if TYPE_CHECKING:
-    from packaging.version import LegacyVersion
 
 from .core import LOGGER
 
@@ -140,7 +137,7 @@ def _async_wrap_iter(it: Iterable) -> AsyncGenerator[Any, None]:
     return yield_queue_items()
 
 
-def get_latest_version(timeout: float = 0.1) -> LegacyVersion | Version | None:
+def get_latest_version(timeout: float = 0.1) -> Version | None:
     """Determine the latest released version (on PyPI) of this tool."""
     try:
         req = SESSION.get(
