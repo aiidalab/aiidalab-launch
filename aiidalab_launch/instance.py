@@ -13,7 +13,9 @@ from shutil import rmtree
 from time import time
 from typing import Any
 
-import docker
+import docker.errors
+import docker.models.images
+import docker.types
 from docker.models.containers import Container
 
 from .core import LOGGER
@@ -134,6 +136,7 @@ class AiidaLabInstance:
     def configuration_changes(self) -> Generator[str, None, None]:
         self._requires_container()
         assert self.container is not None
+        assert self.container.image is not None
         assert self.image is not None
 
         if self.container.image.id != self.image.id:
@@ -175,7 +178,7 @@ class AiidaLabInstance:
         assert self._container is None
         self._ensure_home_mount_exists()
         self._container = self.client.containers.create(
-            image=(self.image or self.pull()),
+            image=(self.image or self.pull()),  # type: ignore[arg-type]
             name=self.profile.container_name(),
             environment=self.profile.environment(jupyter_token=token_hex(32)),
             mounts=list(self._mounts()),
@@ -259,10 +262,10 @@ class AiidaLabInstance:
 
     def logs(
         self, stream: bool = False, follow: bool = False
-    ) -> docker.types.daemon.CancellableStream | str:
+    ) -> docker.types.daemon.CancellableStream[bytes] | bytes:
         if self.container is None:
             raise RuntimeError("Instance was not created.")
-        return self.container.logs(stream=stream, follow=follow)
+        return self.container.logs(stream=stream, follow=follow)  # type: ignore[call-overload]
 
     def exec_create(self, cmd: str, privileged: bool = False) -> str:
         LOGGER.info(f"Executing: {' '.join(cmd)}")

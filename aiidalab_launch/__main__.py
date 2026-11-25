@@ -13,7 +13,7 @@ from pathlib import Path
 from textwrap import wrap
 
 import click
-import docker
+import docker.errors
 from packaging.version import parse
 from tabulate import tabulate
 

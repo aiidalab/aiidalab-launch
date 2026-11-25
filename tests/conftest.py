@@ -10,11 +10,15 @@ from pathlib import Path
 
 import click
 import docker
+import docker.api.image
+import docker.errors
 import pytest
 import requests
 import responses
 
 import aiidalab_launch
+import aiidalab_launch.profile
+import aiidalab_launch.util
 from aiidalab_launch.application_state import ApplicationState
 from aiidalab_launch.config import Config
 from aiidalab_launch.instance import AiidaLabInstance, RequiresContainerInstance
