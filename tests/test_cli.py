@@ -7,6 +7,7 @@ import logging
 from dataclasses import replace
 
 import docker
+import docker.errors
 import pytest
 from click.testing import CliRunner, Result
 
